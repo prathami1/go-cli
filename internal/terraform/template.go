@@ -18,6 +18,7 @@ type TemplateData struct {
 	CloudProvider      string
 	Region             string
 	Environment        string
+	ImageName          string
 	EnableDatabase     bool
 	EnableStorage      bool
 	EnableLoadBalancer bool
@@ -66,6 +67,7 @@ func GenerateConfigFromTemplates(cfg *config.DeploymentConfig) error {
 		CloudProvider:      string(cfg.CloudProvider),
 		Region:             cfg.Region,
 		Environment:        "production", // Default environment
+		ImageName:          cfg.ImageName,
 		EnableDatabase:     cfg.Services.Database,
 		EnableStorage:      cfg.Services.Storage,
 		EnableLoadBalancer: cfg.Services.LoadBalancer,
@@ -361,6 +363,12 @@ output "application_url" {
   description = "Application URL"
   value       = "http://${google_compute_instance.app.network_interface[0].access_config[0].nat_ip}"
 }
+
+output "ssh_private_key_pem" {
+  description = "SSH private key for the VM. Save this securely."
+  value       = tls_private_key.ssh.private_key_pem
+  sensitive   = true
+}
 `)
 	case config.Docker:
 		outputs.WriteString(`
@@ -404,6 +412,12 @@ output "public_ip" {
 output "application_url" {
   description = "Application URL"
   value       = "http://${azurerm_public_ip.main.ip_address}"
+}
+
+output "ssh_private_key_pem" {
+  description = "SSH private key for the VM. Save this securely."
+  value       = tls_private_key.ssh.private_key_pem
+  sensitive   = true
 }
 `)
 	case config.Docker:

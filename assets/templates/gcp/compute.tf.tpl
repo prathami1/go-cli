@@ -81,7 +81,7 @@ resource "google_cloud_run_service" "app" {
   template {
     spec {
       containers {
-        image = "gcr.io/cloudrun/hello"
+        image = "{{if .ImageName}}{{.ImageName}}{{else}}gcr.io/cloudrun/hello{{end}}"
         
         ports {
           container_port = 8080
@@ -192,15 +192,6 @@ resource "google_service_account" "app" {
 resource "tls_private_key" "ssh" {
   algorithm = "RSA"
   rsa_bits  = 4096
-}
-
-resource "local_file" "private_key" {
-  content  = tls_private_key.ssh.private_key_pem
-  filename = "${path.module}/{{.ProjectName}}-key.pem"
-
-  provisioner "local-exec" {
-    command = "chmod 600 ${path.module}/{{.ProjectName}}-key.pem"
-  }
 }
 
 # Startup script for Node.js

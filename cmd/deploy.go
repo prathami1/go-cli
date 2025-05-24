@@ -92,7 +92,7 @@ func runDeploy(cmd *cobra.Command) error {
 	}
 
 	// Create persistent directory for Terraform files
-	terraformDir := ".clouddeploy-tf"
+	terraformDir := terraform.TerraformWorkingDir
 	if err := os.MkdirAll(terraformDir, 0755); err != nil {
 		return fmt.Errorf("failed to create terraform directory: %w", err)
 	}

@@ -12,7 +12,10 @@ import (
 	"github.com/prathami1/go-cli/internal/logger"
 )
 
-const terraformDir = ".clouddeploy-tf"
+// TerraformWorkingDir is the directory where Terraform files are generated and executed
+const TerraformWorkingDir = ".clouddeploy-tf"
+
+const terraformDir = TerraformWorkingDir
 
 // GenerateConfigInDir generates Terraform configuration files in a specific directory using templates
 func GenerateConfigInDir(cfg *config.DeploymentConfig, targetDir string) error {
@@ -30,6 +33,7 @@ func GenerateConfigInDir(cfg *config.DeploymentConfig, targetDir string) error {
 		CloudProvider:      string(cfg.CloudProvider),
 		Region:             cfg.Region,
 		Environment:        "production", // Default environment
+		ImageName:          cfg.ImageName,
 		EnableDatabase:     cfg.Services.Database,
 		EnableStorage:      cfg.Services.Storage,
 		EnableLoadBalancer: cfg.Services.LoadBalancer,
@@ -323,20 +327,8 @@ func GetOutputsInDir(dir string) (map[string]interface{}, error) {
 }
 
 func generateMainTF(cfg *config.DeploymentConfig) error {
-	var content string
-
-	switch cfg.CloudProvider {
-	case config.AWS:
-		content = generateAWSMainTF(cfg)
-	case config.GCP:
-		content = generateGCPMainTF(cfg)
-	case config.Azure:
-		content = generateAzureMainTF(cfg)
-	default:
-		return fmt.Errorf("unsupported cloud provider: %s", cfg.CloudProvider)
-	}
-
-	return writeFile("main.tf", content)
+	// This function is deprecated - use GenerateConfigInDir with templates instead
+	return fmt.Errorf("generateMainTF is deprecated, use GenerateConfigInDir with templates")
 }
 
 func generateVariablesTF(cfg *config.DeploymentConfig) error {
@@ -379,20 +371,8 @@ variable "enable_load_balancer" {
 }
 
 func generateOutputsTF(cfg *config.DeploymentConfig) error {
-	var content string
-
-	switch cfg.CloudProvider {
-	case config.AWS:
-		content = generateAWSOutputsTF(cfg)
-	case config.GCP:
-		content = generateGCPOutputsTF(cfg)
-	case config.Azure:
-		content = generateAzureOutputsTF(cfg)
-	default:
-		return fmt.Errorf("unsupported cloud provider: %s", cfg.CloudProvider)
-	}
-
-	return writeFile("outputs.tf", content)
+	// This function is deprecated - use GenerateConfigInDir with templates instead
+	return fmt.Errorf("generateOutputsTF is deprecated, use GenerateConfigInDir with templates")
 }
 
 func generateTFVars(cfg *config.DeploymentConfig) error {

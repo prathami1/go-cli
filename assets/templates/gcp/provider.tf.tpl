@@ -10,12 +10,21 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.1"
     }
+    http = {
+      source  = "hashicorp/http"
+      version = "~> 3.4"
+    }
   }
 }
 
 provider "google" {
   region = "{{.Region}}"
   zone   = "{{.Region}}-a"
+}
+
+# Get current public IP for secure SSH access
+data "http" "current_ip" {
+  url = "https://ipv4.icanhazip.com"
 }
 
 # Random ID for unique resource names
@@ -78,9 +87,9 @@ resource "google_compute_firewall" "allow_ssh" {
     ports    = ["22"]
   }
 
-  source_ranges = ["0.0.0.0/0"]
+  source_ranges = ["${chomp(data.http.current_ip.response_body)}/32"]
   target_tags   = ["ssh-server"]
-  description   = "Allow SSH access"
+  description   = "Allow SSH access from current public IP"
 }
 {{end}}
 

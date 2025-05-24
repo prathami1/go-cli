@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/prathami1/go-cli/internal/config"
@@ -124,6 +125,20 @@ func runInit() error {
 		return err
 	}
 
+	// Prompt for Docker image name if app type is Docker
+	var imageName string
+	if config.AppType(appType) == config.Docker {
+		imageName, err = utils.PromptString("Docker Image Name (e.g., your_username/your_app:latest)", func(input string) error {
+			if strings.TrimSpace(input) == "" {
+				return fmt.Errorf("Docker image name cannot be empty")
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+
 	// Prompt for optional services
 	database, err := utils.PromptYesNo("Include database?")
 	if err != nil {
@@ -146,6 +161,7 @@ func runInit() error {
 		AppType:       config.AppType(appType),
 		CloudProvider: config.CloudProvider(cloudProvider),
 		Region:        region,
+		ImageName:     imageName,
 		Services: config.Services{
 			Database:     database,
 			Storage:      storage,

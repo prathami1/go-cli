@@ -17,14 +17,9 @@ resource "google_sql_database_instance" "main" {
     tier = "db-f1-micro"
 
     ip_configuration {
-      ipv4_enabled                                  = true
+      ipv4_enabled                                  = false
       private_network                              = google_compute_network.main.id
       enable_private_path_for_google_cloud_services = true
-      
-      authorized_networks {
-        name  = "all"
-        value = "0.0.0.0/0"
-      }
     }
 
     backup_configuration {

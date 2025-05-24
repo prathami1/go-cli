@@ -70,7 +70,7 @@ func runDestroy(cmd *cobra.Command) error {
 	}
 
 	// Check if the terraform directory exists
-	terraformDir := ".clouddeploy-tf"
+	terraformDir := terraform.TerraformWorkingDir
 	if _, err := os.Stat(terraformDir); os.IsNotExist(err) {
 		return fmt.Errorf("no terraform configuration found. Run 'clouddeploy deploy' first")
 	}

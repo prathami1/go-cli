@@ -32,6 +32,7 @@ type DeploymentConfig struct {
 	AppType        AppType       `json:"app_type"`
 	CloudProvider  CloudProvider `json:"cloud_provider"`
 	Region         string        `json:"region"`
+	ImageName      string        `json:"image_name,omitempty"`
 	Services       Services      `json:"services"`
 	CreatedAt      string        `json:"created_at"`
 	LastDeployment string        `json:"last_deployment,omitempty"`

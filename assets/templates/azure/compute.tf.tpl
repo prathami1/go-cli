@@ -57,7 +57,7 @@ resource "azurerm_container_group" "app" {
 
   container {
     name   = "{{.ProjectName}}"
-    image  = "nginx:alpine"
+    image  = "{{if .ImageName}}{{.ImageName}}{{else}}nginx:alpine{{end}}"
     cpu    = "0.5"
     memory = "1.0"
 
@@ -107,15 +107,6 @@ resource "azurerm_network_interface" "main" {
 resource "tls_private_key" "ssh" {
   algorithm = "RSA"
   rsa_bits  = 4096
-}
-
-resource "local_file" "private_key" {
-  content  = tls_private_key.ssh.private_key_pem
-  filename = "${path.module}/{{.ProjectName}}-key.pem"
-
-  provisioner "local-exec" {
-    command = "chmod 600 ${path.module}/{{.ProjectName}}-key.pem"
-  }
 }
 
 # Virtual Machine

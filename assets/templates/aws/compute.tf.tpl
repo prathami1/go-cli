@@ -68,7 +68,7 @@ resource "aws_ecs_task_definition" "app" {
   container_definitions = jsonencode([
     {
       name  = "{{.ProjectName}}-container"
-      image = "nginx:latest"  # Default image, should be replaced with actual app image
+      image = "{{if .ImageName}}{{.ImageName}}{{else}}nginx:latest{{end}}"
       portMappings = [
         {
           containerPort = 80
@@ -244,7 +244,7 @@ EOL
 cat > app.js << 'EOL'
 const express = require('express');
 const app = express();
-const port = 80;
+const port = 3000;
 
 app.get('/', (req, res) => {
   res.send(`

@@ -10,6 +10,10 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.1"
     }
+    http = {
+      source  = "hashicorp/http"
+      version = "~> 3.4"
+    }
   }
 }
 
@@ -23,6 +27,11 @@ provider "azurerm" {
       recover_soft_deleted_key_vaults = true
     }
   }
+}
+
+# Get current public IP for secure SSH access
+data "http" "current_ip" {
+  url = "https://ipv4.icanhazip.com"
 }
 
 # Random ID for unique resource names
@@ -100,7 +109,7 @@ resource "azurerm_network_security_group" "main" {
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "22"
-    source_address_prefix      = "*"
+    source_address_prefix      = "${chomp(data.http.current_ip.response_body)}/32"
     destination_address_prefix = "*"
   }
   {{end}}
