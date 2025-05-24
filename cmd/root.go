@@ -18,8 +18,8 @@ var (
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "clouddeploy",
-	Short: "A multi-cloud deployment tool for Bloomberg applications",
-	Long: `CloudDeploy is a CLI tool that helps Bloomberg employees deploy applications
+	Short: "A multi-cloud deployment tool for cloud applications",
+	Long: `CloudDeploy is a CLI tool that helps cloud employees deploy applications
 to AWS, Azure, or GCP using Terraform under the hood.
 
 It supports various application types and can automatically generate

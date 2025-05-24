@@ -1,8 +1,8 @@
 # CloudDeploy CLI
 
-> **Production-Ready Multi-Cloud Deployment Tool for Bloomberg**
+> **Production-Ready Multi-Cloud Deployment Tool**
 
-CloudDeploy is an enterprise-grade CLI tool that intelligently detects your application type and deploys it to AWS, GCP, or Azure using Terraform. Built specifically for Bloomberg's infrastructure needs with security, reliability, and ease of use in mind.
+CloudDeploy is an enterprise-grade CLI tool that intelligently detects your application type and deploys it to AWS, GCP, or Azure using Terraform.
 
 ## 🚀 Features
 
@@ -39,7 +39,7 @@ CloudDeploy is an enterprise-grade CLI tool that intelligently detects your appl
 ### Quick Install
 ```bash
 # Clone the repository
-git clone https://github.com/bloomberg/clouddeploy-cli.git
+git clone url
 cd clouddeploy-cli
 
 # Build the binary
@@ -394,7 +394,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🏆 Acknowledgments
 
-- **Bloomberg Engineering** for infrastructure requirements and feedback
 - **Terraform** for infrastructure-as-code capabilities
 - **Cobra** for CLI framework
 - **Go Community** for excellent tooling and libraries
@@ -402,5 +401,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **CloudDeploy CLI** - Intelligent Multi-Cloud Deployment for the Modern Enterprise
-
-Built with ❤️ by the Bloomberg Infrastructure Team 
