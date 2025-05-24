@@ -45,14 +45,16 @@ resource "azurerm_mysql_flexible_server_firewall_rule" "azure_services" {
   end_ip_address      = "0.0.0.0"
 }
 
-# Firewall rule to allow all IPs (for development)
-resource "azurerm_mysql_flexible_server_firewall_rule" "allow_all" {
-  name                = "AllowAll"
+# Firewall rule to allow application subnet access
+{{if eq .AppType "nodejs" "flask" "docker"}}
+resource "azurerm_mysql_flexible_server_firewall_rule" "app_subnet" {
+  name                = "AllowAppSubnet"
   resource_group_name = azurerm_resource_group.main.name
   server_name         = azurerm_mysql_flexible_server.main.name
-  start_ip_address    = "0.0.0.0"
-  end_ip_address      = "255.255.255.255"
+  start_ip_address    = "10.0.1.0"
+  end_ip_address      = "10.0.1.255"
 }
+{{end}}
 
 # Key Vault for storing database credentials
 resource "azurerm_key_vault" "main" {

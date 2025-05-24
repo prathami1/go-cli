@@ -8,68 +8,31 @@ import (
 	"github.com/prathami1/go-cli/internal/config"
 )
 
-func TestCreateTempTerraformDir(t *testing.T) {
-	projectName := "test-project"
+func TestPersistentTerraformDir(t *testing.T) {
+	// Test that we can create the persistent terraform directory
+	terraformDir := ".clouddeploy-tf"
 
-	// Test creating temp directory
-	tempDir, err := createTempTerraformDir(projectName)
-	if err != nil {
-		t.Fatalf("createTempTerraformDir failed: %v", err)
+	// Clean up any existing directory first
+	os.RemoveAll(terraformDir)
+
+	// Test creating persistent directory
+	if err := os.MkdirAll(terraformDir, 0755); err != nil {
+		t.Fatalf("Failed to create terraform directory: %v", err)
 	}
 
 	// Verify directory exists
-	if _, err := os.Stat(tempDir); os.IsNotExist(err) {
-		t.Errorf("Temporary directory was not created: %s", tempDir)
+	if _, err := os.Stat(terraformDir); os.IsNotExist(err) {
+		t.Errorf("Terraform directory was not created: %s", terraformDir)
 	}
 
-	// Verify directory name contains project name
-	if !contains(tempDir, projectName) {
-		t.Errorf("Temporary directory name should contain project name: %s", tempDir)
+	// Verify we can write to the directory
+	testFile := filepath.Join(terraformDir, "test.tf")
+	if err := os.WriteFile(testFile, []byte("# test terraform file"), 0644); err != nil {
+		t.Errorf("Failed to write to terraform directory: %v", err)
 	}
 
 	// Clean up
-	defer func() {
-		if err := cleanupTempDir(tempDir); err != nil {
-			t.Errorf("Failed to cleanup temp directory: %v", err)
-		}
-	}()
-
-	// Verify we can write to the directory
-	testFile := filepath.Join(tempDir, "test.txt")
-	if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
-		t.Errorf("Failed to write to temp directory: %v", err)
-	}
-}
-
-func TestCleanupTempDir(t *testing.T) {
-	// Create a temporary directory
-	tempDir := filepath.Join(os.TempDir(), "test-cleanup")
-	if err := os.MkdirAll(tempDir, 0755); err != nil {
-		t.Fatalf("Failed to create test directory: %v", err)
-	}
-
-	// Create a test file in it
-	testFile := filepath.Join(tempDir, "test.txt")
-	if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
-		t.Fatalf("Failed to create test file: %v", err)
-	}
-
-	// Test cleanup
-	if err := cleanupTempDir(tempDir); err != nil {
-		t.Errorf("cleanupTempDir failed: %v", err)
-	}
-
-	// Verify directory is gone
-	if _, err := os.Stat(tempDir); !os.IsNotExist(err) {
-		t.Errorf("Temporary directory still exists after cleanup: %s", tempDir)
-	}
-}
-
-func TestCleanupTempDirEmptyPath(t *testing.T) {
-	// Test cleanup with empty path (should not error)
-	if err := cleanupTempDir(""); err != nil {
-		t.Errorf("cleanupTempDir with empty path should not error: %v", err)
-	}
+	defer os.RemoveAll(terraformDir)
 }
 
 func TestDisplayDeploymentOutputs(t *testing.T) {

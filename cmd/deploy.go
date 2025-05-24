@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/prathami1/go-cli/internal/config"
@@ -92,36 +91,29 @@ func runDeploy(cmd *cobra.Command) error {
 		}
 	}
 
-	// Create temporary directory for Terraform files
-	tempDir, err := createTempTerraformDir(cfg.ProjectName)
-	if err != nil {
-		return fmt.Errorf("failed to create temporary directory: %w", err)
+	// Create persistent directory for Terraform files
+	terraformDir := ".clouddeploy-tf"
+	if err := os.MkdirAll(terraformDir, 0755); err != nil {
+		return fmt.Errorf("failed to create terraform directory: %w", err)
 	}
 
-	// Setup cleanup function
-	defer func() {
-		if err := cleanupTempDir(tempDir); err != nil {
-			logger.Errorf("Warning: failed to cleanup temporary directory: %v", err)
-		}
-	}()
-
-	// Generate Terraform files in temp directory
+	// Generate Terraform files in persistent directory
 	logger.Info("📄 Generating Terraform configuration...")
-	if err := terraform.GenerateConfigInDir(cfg, tempDir); err != nil {
+	if err := terraform.GenerateConfigInDir(cfg, terraformDir); err != nil {
 		return fmt.Errorf("failed to generate Terraform config: %w", err)
 	}
 	logger.Info("✅ Terraform configuration generated")
 
-	// Initialize Terraform in temp directory
+	// Initialize Terraform in persistent directory
 	logger.Info("🔧 Initializing Terraform...")
-	if err := terraform.InitInDir(tempDir); err != nil {
+	if err := terraform.InitInDir(terraformDir); err != nil {
 		return fmt.Errorf("terraform init failed: %w", err)
 	}
 	logger.Info("✅ Terraform initialized")
 
 	// Run Terraform plan
 	logger.Info("📋 Running Terraform plan...")
-	planOutput, err := terraform.PlanInDir(tempDir)
+	planOutput, err := terraform.PlanInDir(terraformDir)
 	if err != nil {
 		return fmt.Errorf("terraform plan failed: %w", err)
 	}
@@ -154,7 +146,7 @@ func runDeploy(cmd *cobra.Command) error {
 
 	// Apply Terraform configuration
 	logger.Info("🚀 Applying Terraform configuration...")
-	applyOutput, err := terraform.ApplyInDir(tempDir)
+	applyOutput, err := terraform.ApplyInDir(terraformDir)
 	if err != nil {
 		return fmt.Errorf("terraform apply failed: %w", err)
 	}
@@ -170,7 +162,7 @@ func runDeploy(cmd *cobra.Command) error {
 
 	// Get outputs from Terraform
 	logger.Info("📊 Retrieving deployment outputs...")
-	outputs, err := terraform.GetOutputsInDir(tempDir)
+	outputs, err := terraform.GetOutputsInDir(terraformDir)
 	if err != nil {
 		logger.Errorf("Warning: failed to get Terraform outputs: %v", err)
 	} else {
@@ -212,26 +204,4 @@ func displayDeploymentOutputs(cfg *config.DeploymentConfig, outputs map[string]i
 	if cfg.Services.Database {
 		logger.Info("- Database credentials are available in the outputs above")
 	}
-}
-
-// createTempTerraformDir creates a temporary directory for Terraform files
-func createTempTerraformDir(projectName string) (string, error) {
-	tempDir := filepath.Join(os.TempDir(), fmt.Sprintf("clouddeploy-%s-%d", projectName, time.Now().Unix()))
-
-	if err := os.MkdirAll(tempDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create temporary directory: %w", err)
-	}
-
-	logger.Debugf("Created temporary directory: %s", tempDir)
-	return tempDir, nil
-}
-
-// cleanupTempDir removes the temporary directory
-func cleanupTempDir(tempDir string) error {
-	if tempDir == "" {
-		return nil
-	}
-
-	logger.Debugf("Cleaning up temporary directory: %s", tempDir)
-	return os.RemoveAll(tempDir)
 }

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/prathami1/go-cli/internal/config"
 	"github.com/prathami1/go-cli/internal/logger"
@@ -68,6 +69,12 @@ func runDestroy(cmd *cobra.Command) error {
 		}
 	}
 
+	// Check if the terraform directory exists
+	terraformDir := ".clouddeploy-tf"
+	if _, err := os.Stat(terraformDir); os.IsNotExist(err) {
+		return fmt.Errorf("no terraform configuration found. Run 'clouddeploy deploy' first")
+	}
+
 	// Run Terraform destroy
 	logger.Info("🔥 Running terraform destroy...")
 	destroyOutput, err := terraform.Destroy()
@@ -102,8 +109,7 @@ func runDestroy(cmd *cobra.Command) error {
 }
 
 func cleanupTerraformFiles() error {
-	// This would remove the .terraform-generated directory
-	// For now, we'll just log that it would happen
-	logger.Debug("Would remove .terraform-generated directory")
-	return nil
+	terraformDir := ".clouddeploy-tf"
+	logger.Debugf("Removing terraform directory: %s", terraformDir)
+	return os.RemoveAll(terraformDir)
 }

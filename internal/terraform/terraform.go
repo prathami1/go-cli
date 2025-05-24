@@ -6,14 +6,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/prathami1/go-cli/internal/config"
 	"github.com/prathami1/go-cli/internal/logger"
 )
 
-const terraformDir = ".terraform-generated"
+const terraformDir = ".clouddeploy-tf"
 
-// GenerateConfigInDir generates Terraform configuration files in a specific directory
+// GenerateConfigInDir generates Terraform configuration files in a specific directory using templates
 func GenerateConfigInDir(cfg *config.DeploymentConfig, targetDir string) error {
 	logger.Debugf("Generating Terraform configuration in directory: %s", targetDir)
 
@@ -22,9 +23,61 @@ func GenerateConfigInDir(cfg *config.DeploymentConfig, targetDir string) error {
 		return fmt.Errorf("failed to create target directory: %w", err)
 	}
 
-	// Generate main.tf
-	if err := generateMainTFInDir(cfg, targetDir); err != nil {
-		return fmt.Errorf("failed to generate main.tf: %w", err)
+	// Prepare template data
+	templateData := &TemplateData{
+		ProjectName:        cfg.ProjectName,
+		AppType:            string(cfg.AppType),
+		CloudProvider:      string(cfg.CloudProvider),
+		Region:             cfg.Region,
+		Environment:        "production", // Default environment
+		EnableDatabase:     cfg.Services.Database,
+		EnableStorage:      cfg.Services.Storage,
+		EnableLoadBalancer: cfg.Services.LoadBalancer,
+	}
+
+	// Get template directory path
+	templateDir := getTemplateDir(cfg.CloudProvider)
+	if _, err := os.Stat(templateDir); os.IsNotExist(err) {
+		return fmt.Errorf("template directory not found: %s", templateDir)
+	}
+
+	// Render each template
+	templates := []string{"provider.tf.tpl", "compute.tf.tpl"}
+
+	// Add optional templates based on services
+	if cfg.Services.Database {
+		templates = append(templates, "database.tf.tpl")
+	}
+	if cfg.Services.Storage {
+		templates = append(templates, "storage.tf.tpl")
+	}
+	if cfg.Services.LoadBalancer {
+		templates = append(templates, "loadbalancer.tf.tpl")
+	}
+
+	// Render and write each template
+	for _, templateName := range templates {
+		templatePath := filepath.Join(templateDir, templateName)
+		if _, err := os.Stat(templatePath); os.IsNotExist(err) {
+			logger.Debugf("Template not found, skipping: %s", templatePath)
+			continue
+		}
+
+		// Render template
+		rendered, err := RenderTemplate(templatePath, templateData)
+		if err != nil {
+			return fmt.Errorf("failed to render template %s: %w", templateName, err)
+		}
+
+		// Write rendered content to file
+		outputFileName := strings.TrimSuffix(templateName, ".tpl")
+		outputPath := filepath.Join(targetDir, outputFileName)
+
+		if err := os.WriteFile(outputPath, []byte(rendered), 0644); err != nil {
+			return fmt.Errorf("failed to write rendered template to %s: %w", outputPath, err)
+		}
+
+		logger.Debugf("Generated: %s", outputPath)
 	}
 
 	// Generate variables.tf
@@ -32,7 +85,7 @@ func GenerateConfigInDir(cfg *config.DeploymentConfig, targetDir string) error {
 		return fmt.Errorf("failed to generate variables.tf: %w", err)
 	}
 
-	// Generate outputs.tf
+	// Generate outputs.tf using template system
 	if err := generateOutputsTFInDir(cfg, targetDir); err != nil {
 		return fmt.Errorf("failed to generate outputs.tf: %w", err)
 	}
@@ -47,22 +100,6 @@ func GenerateConfigInDir(cfg *config.DeploymentConfig, targetDir string) error {
 }
 
 // Helper functions for generating files in specific directories
-func generateMainTFInDir(cfg *config.DeploymentConfig, dir string) error {
-	var content string
-
-	switch cfg.CloudProvider {
-	case config.AWS:
-		content = generateAWSMainTF(cfg)
-	case config.GCP:
-		content = generateGCPMainTF(cfg)
-	case config.Azure:
-		content = generateAzureMainTF(cfg)
-	default:
-		return fmt.Errorf("unsupported cloud provider: %s", cfg.CloudProvider)
-	}
-
-	return writeFileInDir(dir, "main.tf", content)
-}
 
 func generateVariablesTFInDir(cfg *config.DeploymentConfig, dir string) error {
 	content := `# Variables for deployment configuration
@@ -104,20 +141,20 @@ variable "enable_load_balancer" {
 }
 
 func generateOutputsTFInDir(cfg *config.DeploymentConfig, dir string) error {
-	var content string
-
+	// Use the sophisticated template-based outputs
 	switch cfg.CloudProvider {
 	case config.AWS:
-		content = generateAWSOutputsTF(cfg)
+		content := generateAWSOutputs(cfg)
+		return writeFileInDir(dir, "outputs.tf", content)
 	case config.GCP:
-		content = generateGCPOutputsTF(cfg)
+		content := generateGCPOutputs(cfg)
+		return writeFileInDir(dir, "outputs.tf", content)
 	case config.Azure:
-		content = generateAzureOutputsTF(cfg)
+		content := generateAzureOutputs(cfg)
+		return writeFileInDir(dir, "outputs.tf", content)
 	default:
 		return fmt.Errorf("unsupported cloud provider: %s", cfg.CloudProvider)
 	}
-
-	return writeFileInDir(dir, "outputs.tf", content)
 }
 
 func generateTFVarsInDir(cfg *config.DeploymentConfig, dir string) error {

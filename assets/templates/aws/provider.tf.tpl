@@ -10,6 +10,14 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.1"
     }
+    http = {
+      source  = "hashicorp/http"
+      version = "~> 3.4"
+    }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
+    }
   }
 }
 
@@ -32,6 +40,11 @@ data "aws_availability_zones" "available" {
 }
 
 data "aws_caller_identity" "current" {}
+
+# Get current public IP for secure SSH access
+data "http" "current_ip" {
+  url = "https://ipv4.icanhazip.com"
+}
 
 # Random ID for unique resource names
 resource "random_id" "suffix" {
@@ -111,10 +124,11 @@ resource "aws_security_group" "app" {
 
   {{if eq .AppType "nodejs" "flask"}}
   ingress {
+    description = "SSH access from current IP only"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["${chomp(data.http.current_ip.response_body)}/32"]
   }
   {{end}}
 

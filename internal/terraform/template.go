@@ -136,16 +136,47 @@ func GenerateConfigFromTemplates(cfg *config.DeploymentConfig) error {
 
 // getTemplateDir returns the template directory path for the given cloud provider
 func getTemplateDir(provider config.CloudProvider) string {
+	// Find the project root by looking for go.mod
+	projectRoot := findProjectRoot()
+
+	var templateSubDir string
 	switch provider {
 	case config.AWS:
-		return "assets/templates/aws"
+		templateSubDir = "assets/templates/aws"
 	case config.GCP:
-		return "assets/templates/gcp"
+		templateSubDir = "assets/templates/gcp"
 	case config.Azure:
-		return "assets/templates/azure"
+		templateSubDir = "assets/templates/azure"
 	default:
 		return ""
 	}
+
+	return filepath.Join(projectRoot, templateSubDir)
+}
+
+// findProjectRoot finds the project root directory by looking for go.mod
+func findProjectRoot() string {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "."
+	}
+
+	// Walk up the directory tree looking for go.mod
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			// Reached the root directory
+			break
+		}
+		dir = parent
+	}
+
+	// If we can't find go.mod, assume current directory
+	return "."
 }
 
 // templateFuncs returns custom template functions

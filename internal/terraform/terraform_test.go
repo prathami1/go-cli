@@ -36,7 +36,7 @@ func TestGenerateConfigInDir(t *testing.T) {
 	}
 
 	// Check that all expected files were created
-	expectedFiles := []string{"main.tf", "variables.tf", "outputs.tf", "terraform.tfvars"}
+	expectedFiles := []string{"provider.tf", "compute.tf", "variables.tf", "outputs.tf", "terraform.tfvars"}
 	for _, filename := range expectedFiles {
 		filePath := filepath.Join(tempDir, filename)
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {
@@ -64,8 +64,8 @@ func TestGenerateConfigInDirInvalidProvider(t *testing.T) {
 		t.Error("Expected error for invalid cloud provider")
 	}
 
-	if !contains(err.Error(), "unsupported cloud provider") {
-		t.Errorf("Expected error message about unsupported provider, got: %v", err)
+	if !contains(err.Error(), "template directory not found") {
+		t.Errorf("Expected error message about template directory, got: %v", err)
 	}
 }
 
@@ -96,7 +96,7 @@ func TestWriteFileInDir(t *testing.T) {
 	}
 }
 
-func TestGenerateMainTFInDir(t *testing.T) {
+func TestGenerateConfigInDirWithTemplates(t *testing.T) {
 	tempDir, err := os.MkdirTemp("", "terraform-test-*")
 	if err != nil {
 		t.Fatalf("Failed to create temp directory: %v", err)
@@ -121,18 +121,26 @@ func TestGenerateMainTFInDir(t *testing.T) {
 				AppType:       config.NodeJS,
 				CloudProvider: tt.provider,
 				Region:        "test-region",
+				Services: config.Services{
+					Database:     true,
+					Storage:      false,
+					LoadBalancer: true,
+				},
 			}
 
-			err := generateMainTFInDir(cfg, tempDir)
+			err := GenerateConfigInDir(cfg, tempDir)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("generateMainTFInDir() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GenerateConfigInDir() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
 			if !tt.wantErr {
-				// Verify file was created
-				filePath := filepath.Join(tempDir, "main.tf")
-				if _, err := os.Stat(filePath); os.IsNotExist(err) {
-					t.Errorf("main.tf file was not created for provider %s", tt.provider)
+				// Verify core files were created
+				expectedFiles := []string{"variables.tf", "outputs.tf", "terraform.tfvars"}
+				for _, file := range expectedFiles {
+					filePath := filepath.Join(tempDir, file)
+					if _, err := os.Stat(filePath); os.IsNotExist(err) {
+						t.Errorf("%s file was not created for provider %s", file, tt.provider)
+					}
 				}
 			}
 		})
@@ -338,7 +346,7 @@ func TestTerraformDirectoryOperationsIntegration(t *testing.T) {
 				}
 
 				// Verify all files exist and have content
-				expectedFiles := []string{"main.tf", "variables.tf", "outputs.tf", "terraform.tfvars"}
+				expectedFiles := []string{"provider.tf", "compute.tf", "variables.tf", "outputs.tf", "terraform.tfvars"}
 				for _, filename := range expectedFiles {
 					filePath := filepath.Join(testDir, filename)
 					if stat, err := os.Stat(filePath); os.IsNotExist(err) {
