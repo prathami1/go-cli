@@ -4,8 +4,13 @@
 BINARY_NAME=clouddeploy
 MAIN_PACKAGE=.
 BUILD_DIR=./bin
-VERSION?=dev
-LDFLAGS=-ldflags "-X main.version=$(VERSION)"
+VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+BUILD_TIME=$(shell date -u '+%Y-%m-%d_%H:%M:%S')
+BUILD_USER=$(shell whoami)
+GIT_COMMIT=$(shell git rev-parse HEAD 2>/dev/null || echo "unknown")
+
+# Build flags for production
+LDFLAGS=-ldflags "-s -w -X main.version=$(VERSION) -X main.buildTime=$(BUILD_TIME) -X main.buildUser=$(BUILD_USER) -X main.gitCommit=$(GIT_COMMIT)"
 
 # Default target
 .PHONY: all
@@ -63,6 +68,22 @@ test-coverage:
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
 
+# Run tests with race detector
+.PHONY: test-race
+test-race:
+	@echo "Running tests with race detector..."
+	go test -race ./...
+
+# Run integration tests
+.PHONY: test-integration
+test-integration:
+	@echo "Running integration tests..."
+	go test -tags=integration -v ./...
+
+# Run all tests
+.PHONY: test-all
+test-all: test test-race test-integration
+
 # Clean build artifacts
 .PHONY: clean
 clean:
@@ -97,6 +118,36 @@ lint:
 		go vet ./...; \
 	fi
 
+# Security scanning
+.PHONY: security
+security:
+	@echo "Running security scans..."
+	go vet ./...
+	@if command -v gosec >/dev/null 2>&1; then \
+		gosec ./...; \
+	else \
+		echo "gosec not found. Install with: go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest"; \
+	fi
+	@if command -v govulncheck >/dev/null 2>&1; then \
+		govulncheck ./...; \
+	else \
+		echo "govulncheck not found. Install with: go install golang.org/x/vuln/cmd/govulncheck@latest"; \
+	fi
+
+# Run benchmarks
+.PHONY: benchmark
+benchmark:
+	@echo "Running benchmarks..."
+	go test -bench=. -benchmem ./...
+
+# Production build with security flags
+.PHONY: build-production
+build-production:
+	@echo "Building $(BINARY_NAME) for production..."
+	@mkdir -p $(BUILD_DIR)
+	CGO_ENABLED=0 go build -buildmode=pie $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) $(MAIN_PACKAGE)
+	@echo "Production binary built: $(BUILD_DIR)/$(BINARY_NAME)"
+
 # Run the application (for development)
 .PHONY: run
 run: build-local
@@ -119,25 +170,54 @@ dev-setup: deps
 	fi
 	@echo "Development environment ready!"
 
+# Install security and development tools
+.PHONY: install-tools
+install-tools:
+	@echo "Installing development and security tools..."
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+	go install golang.org/x/vuln/cmd/govulncheck@latest
+	go install golang.org/x/tools/cmd/goimports@latest
+	@echo "Tools installed successfully"
+
+# Pre-commit checks
+.PHONY: pre-commit
+pre-commit: fmt lint security test-all
+	@echo "Pre-commit checks completed successfully"
+
+# Release preparation
+.PHONY: release-check
+release-check: pre-commit build-production
+	@echo "Release readiness check completed"
+
 # Help
 .PHONY: help
 help:
 	@echo "CloudDeploy CLI Makefile"
 	@echo ""
 	@echo "Available targets:"
-	@echo "  build         Build the binary for current platform"
-	@echo "  build-local   Quick build for local development"
-	@echo "  build-all     Build for multiple platforms"
-	@echo "  test          Run tests"
-	@echo "  test-coverage Run tests with coverage report"
-	@echo "  clean         Clean build artifacts"
-	@echo "  deps          Install dependencies"
-	@echo "  fmt           Format code"
-	@echo "  lint          Lint code"
-	@echo "  run           Build and run the application"
-	@echo "  install       Install binary to GOPATH/bin"
-	@echo "  dev-setup     Set up development environment"
-	@echo "  help          Show this help message"
+	@echo "  build              Build the binary for current platform"
+	@echo "  build-local        Quick build for local development"
+	@echo "  build-production   Build with production security flags"
+	@echo "  build-all          Build for multiple platforms"
+	@echo "  test               Run tests"
+	@echo "  test-coverage      Run tests with coverage report"
+	@echo "  test-race          Run tests with race detector"
+	@echo "  test-integration   Run integration tests"
+	@echo "  test-all           Run all tests (unit, race, integration)"
+	@echo "  benchmark          Run benchmarks"
+	@echo "  clean              Clean build artifacts"
+	@echo "  deps               Install dependencies"
+	@echo "  fmt                Format code"
+	@echo "  lint               Lint code"
+	@echo "  security           Run security scans"
+	@echo "  run                Build and run the application"
+	@echo "  install            Install binary to GOPATH/bin"
+	@echo "  dev-setup          Set up development environment"
+	@echo "  install-tools      Install development and security tools"
+	@echo "  pre-commit         Run all pre-commit checks"
+	@echo "  release-check      Check if ready for release"
+	@echo "  help               Show this help message"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make build              # Build for current platform"

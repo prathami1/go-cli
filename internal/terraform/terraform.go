@@ -13,6 +13,132 @@ import (
 
 const terraformDir = ".terraform-generated"
 
+// GenerateConfigInDir generates Terraform configuration files in a specific directory
+func GenerateConfigInDir(cfg *config.DeploymentConfig, targetDir string) error {
+	logger.Debugf("Generating Terraform configuration in directory: %s", targetDir)
+
+	// Create target directory if it doesn't exist
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return fmt.Errorf("failed to create target directory: %w", err)
+	}
+
+	// Generate main.tf
+	if err := generateMainTFInDir(cfg, targetDir); err != nil {
+		return fmt.Errorf("failed to generate main.tf: %w", err)
+	}
+
+	// Generate variables.tf
+	if err := generateVariablesTFInDir(cfg, targetDir); err != nil {
+		return fmt.Errorf("failed to generate variables.tf: %w", err)
+	}
+
+	// Generate outputs.tf
+	if err := generateOutputsTFInDir(cfg, targetDir); err != nil {
+		return fmt.Errorf("failed to generate outputs.tf: %w", err)
+	}
+
+	// Generate terraform.tfvars
+	if err := generateTFVarsInDir(cfg, targetDir); err != nil {
+		return fmt.Errorf("failed to generate terraform.tfvars: %w", err)
+	}
+
+	logger.Debugf("Successfully generated Terraform configuration in: %s", targetDir)
+	return nil
+}
+
+// Helper functions for generating files in specific directories
+func generateMainTFInDir(cfg *config.DeploymentConfig, dir string) error {
+	var content string
+
+	switch cfg.CloudProvider {
+	case config.AWS:
+		content = generateAWSMainTF(cfg)
+	case config.GCP:
+		content = generateGCPMainTF(cfg)
+	case config.Azure:
+		content = generateAzureMainTF(cfg)
+	default:
+		return fmt.Errorf("unsupported cloud provider: %s", cfg.CloudProvider)
+	}
+
+	return writeFileInDir(dir, "main.tf", content)
+}
+
+func generateVariablesTFInDir(cfg *config.DeploymentConfig, dir string) error {
+	content := `# Variables for deployment configuration
+
+variable "project_name" {
+  description = "Name of the project"
+  type        = string
+}
+
+variable "region" {
+  description = "Deployment region"
+  type        = string
+}
+
+variable "app_type" {
+  description = "Type of application"
+  type        = string
+}
+
+variable "enable_database" {
+  description = "Whether to enable database"
+  type        = bool
+  default     = false
+}
+
+variable "enable_storage" {
+  description = "Whether to enable storage"
+  type        = bool
+  default     = false
+}
+
+variable "enable_load_balancer" {
+  description = "Whether to enable load balancer"
+  type        = bool
+  default     = false
+}
+`
+	return writeFileInDir(dir, "variables.tf", content)
+}
+
+func generateOutputsTFInDir(cfg *config.DeploymentConfig, dir string) error {
+	var content string
+
+	switch cfg.CloudProvider {
+	case config.AWS:
+		content = generateAWSOutputsTF(cfg)
+	case config.GCP:
+		content = generateGCPOutputsTF(cfg)
+	case config.Azure:
+		content = generateAzureOutputsTF(cfg)
+	default:
+		return fmt.Errorf("unsupported cloud provider: %s", cfg.CloudProvider)
+	}
+
+	return writeFileInDir(dir, "outputs.tf", content)
+}
+
+func generateTFVarsInDir(cfg *config.DeploymentConfig, dir string) error {
+	content := fmt.Sprintf(`# Terraform variables
+project_name = "%s"
+region = "%s"
+app_type = "%s"
+enable_database = %t
+enable_storage = %t
+enable_load_balancer = %t
+`, cfg.ProjectName, cfg.Region, cfg.AppType,
+		cfg.Services.Database, cfg.Services.Storage, cfg.Services.LoadBalancer)
+
+	return writeFileInDir(dir, "terraform.tfvars", content)
+}
+
+func writeFileInDir(dir, filename, content string) error {
+	filePath := filepath.Join(dir, filename)
+	return os.WriteFile(filePath, []byte(content), 0644)
+}
+
 // GenerateConfig generates Terraform configuration files based on the deployment config
 func GenerateConfig(cfg *config.DeploymentConfig) error {
 	logger.Debug("Generating Terraform configuration...")
@@ -47,46 +173,64 @@ func GenerateConfig(cfg *config.DeploymentConfig) error {
 
 // Init runs terraform init
 func Init() error {
-	logger.Debug("Running terraform init...")
+	return InitInDir(terraformDir)
+}
+
+// InitInDir runs terraform init in a specific directory
+func InitInDir(dir string) error {
+	logger.Debugf("Running terraform init in directory: %s", dir)
 
 	cmd := exec.Command("terraform", "init")
-	cmd.Dir = terraformDir
+	cmd.Dir = dir
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("terraform init failed: %w\nOutput: %s", err, string(output))
 	}
 
+	logger.Debugf("Terraform init completed successfully in: %s", dir)
 	return nil
 }
 
 // Plan runs terraform plan and returns the output
 func Plan() (string, error) {
-	logger.Debug("Running terraform plan...")
+	return PlanInDir(terraformDir)
+}
+
+// PlanInDir runs terraform plan in a specific directory and returns the output
+func PlanInDir(dir string) (string, error) {
+	logger.Debugf("Running terraform plan in directory: %s", dir)
 
 	cmd := exec.Command("terraform", "plan", "-out=tfplan")
-	cmd.Dir = terraformDir
+	cmd.Dir = dir
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("terraform plan failed: %w\nOutput: %s", err, string(output))
 	}
 
+	logger.Debugf("Terraform plan completed successfully in: %s", dir)
 	return string(output), nil
 }
 
 // Apply runs terraform apply
 func Apply() (string, error) {
-	logger.Debug("Running terraform apply...")
+	return ApplyInDir(terraformDir)
+}
+
+// ApplyInDir runs terraform apply in a specific directory
+func ApplyInDir(dir string) (string, error) {
+	logger.Debugf("Running terraform apply in directory: %s", dir)
 
 	cmd := exec.Command("terraform", "apply", "-auto-approve", "tfplan")
-	cmd.Dir = terraformDir
+	cmd.Dir = dir
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("terraform apply failed: %w\nOutput: %s", err, string(output))
 	}
 
+	logger.Debugf("Terraform apply completed successfully in: %s", dir)
 	return string(output), nil
 }
 
@@ -107,10 +251,15 @@ func Destroy() (string, error) {
 
 // GetOutputs retrieves terraform outputs
 func GetOutputs() (map[string]interface{}, error) {
-	logger.Debug("Getting terraform outputs...")
+	return GetOutputsInDir(terraformDir)
+}
+
+// GetOutputsInDir retrieves terraform outputs from a specific directory
+func GetOutputsInDir(dir string) (map[string]interface{}, error) {
+	logger.Debugf("Getting terraform outputs from directory: %s", dir)
 
 	cmd := exec.Command("terraform", "output", "-json")
-	cmd.Dir = terraformDir
+	cmd.Dir = dir
 
 	output, err := cmd.Output()
 	if err != nil {
@@ -132,6 +281,7 @@ func GetOutputs() (map[string]interface{}, error) {
 		}
 	}
 
+	logger.Debugf("Successfully retrieved %d outputs from: %s", len(result), dir)
 	return result, nil
 }
 
