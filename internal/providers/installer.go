@@ -14,6 +14,7 @@ import (
 
 	"github.com/prathami1/go-cli/internal/config"
 	"github.com/prathami1/go-cli/internal/logger"
+	"github.com/prathami1/go-cli/internal/utils"
 )
 
 // installCLI automatically installs the required CLI tool for the specified cloud provider
@@ -48,44 +49,60 @@ func installAWSCLI() error {
 
 // installAWSCLIWindows installs AWS CLI on Windows using MSI
 func installAWSCLIWindows() error {
-	logger.Info("Installing AWS CLI on Windows...")
+	// Create multi-step installer
+	steps := []utils.InstallationStep{
+		{Name: "Download", Description: "Downloading AWS CLI installer"},
+		{Name: "Install", Description: "Installing AWS CLI"},
+	}
+	installer := utils.NewMultiStepInstaller(steps)
 
-	// Download the MSI installer
+	// Step 1: Download
+	installer.StartStep(0)
 	msiURL := "https://awscli.amazonaws.com/AWSCLIV2.msi"
 	msiPath := filepath.Join(os.TempDir(), "AWSCLIV2.msi")
 
-	if err := downloadFile(msiURL, msiPath); err != nil {
+	if err := downloadFileWithProgress(msiURL, msiPath, "AWS CLI installer"); err != nil {
 		return fmt.Errorf("failed to download AWS CLI installer: %w", err)
 	}
 	defer os.Remove(msiPath)
+	installer.FinishStep()
 
-	// Install using msiexec with quiet mode
+	// Step 2: Install
+	installer.StartStep(1)
+	installer.UpdateStep("Running MSI installer...")
 	cmd := exec.Command("msiexec.exe", "/i", msiPath, "/quiet", "/norestart")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to install AWS CLI: %w", err)
 	}
+	installer.FinishStep()
 
-	logger.Info("✅ AWS CLI installed successfully!")
+	installer.Finish()
 	return nil
 }
 
 // installAWSCLIMacOS installs AWS CLI on macOS using PKG installer
 func installAWSCLIMacOS() error {
-	logger.Info("Installing AWS CLI on macOS...")
+	steps := []utils.InstallationStep{
+		{Name: "Download", Description: "Downloading AWS CLI installer"},
+		{Name: "Install", Description: "Installing AWS CLI"},
+	}
+	installer := utils.NewMultiStepInstaller(steps)
 
-	// Download the PKG installer
+	// Step 1: Download
+	installer.StartStep(0)
 	pkgURL := "https://awscli.amazonaws.com/AWSCLIV2.pkg"
 	pkgPath := filepath.Join(os.TempDir(), "AWSCLIV2.pkg")
 
-	if err := downloadFile(pkgURL, pkgPath); err != nil {
+	if err := downloadFileWithProgress(pkgURL, pkgPath, "AWS CLI installer"); err != nil {
 		return fmt.Errorf("failed to download AWS CLI installer: %w", err)
 	}
 	defer os.Remove(pkgPath)
+	installer.FinishStep()
 
-	// Install using installer command
+	// Step 2: Install
+	installer.StartStep(1)
+	installer.UpdateStep("Running PKG installer (requires sudo)...")
 	cmd := exec.Command("sudo", "installer", "-pkg", pkgPath, "-target", "/")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -93,15 +110,14 @@ func installAWSCLIMacOS() error {
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to install AWS CLI: %w", err)
 	}
+	installer.FinishStep()
 
-	logger.Info("✅ AWS CLI installed successfully!")
+	installer.Finish()
 	return nil
 }
 
 // installAWSCLILinux installs AWS CLI on Linux using the universal method
 func installAWSCLILinux() error {
-	logger.Info("Installing AWS CLI on Linux...")
-
 	// Determine architecture
 	arch := "x86_64"
 	if runtime.GOARCH == "arm64" {
@@ -110,26 +126,37 @@ func installAWSCLILinux() error {
 		arch = "aarch64" // AWS CLI uses aarch64 for both arm and arm64
 	}
 
-	// Download and extract AWS CLI
+	steps := []utils.InstallationStep{
+		{Name: "Download", Description: "Downloading AWS CLI"},
+		{Name: "Extract", Description: "Extracting AWS CLI"},
+		{Name: "Install", Description: "Installing AWS CLI"},
+	}
+	installer := utils.NewMultiStepInstaller(steps)
+
+	// Step 1: Download
+	installer.StartStep(0)
 	zipURL := fmt.Sprintf("https://awscli.amazonaws.com/awscli-exe-linux-%s.zip", arch)
 	zipPath := filepath.Join(os.TempDir(), "awscliv2.zip")
 	extractDir := filepath.Join(os.TempDir(), "aws-cli-install")
 
-	logger.Infof("Downloading AWS CLI from %s...", zipURL)
-	if err := downloadFile(zipURL, zipPath); err != nil {
+	if err := downloadFileWithProgress(zipURL, zipPath, "AWS CLI"); err != nil {
 		return fmt.Errorf("failed to download AWS CLI: %w", err)
 	}
 	defer os.Remove(zipPath)
 	defer os.RemoveAll(extractDir)
+	installer.FinishStep()
 
-	logger.Info("Extracting AWS CLI...")
-	// Extract the zip file
+	// Step 2: Extract
+	installer.StartStep(1)
+	installer.UpdateStep("Extracting AWS CLI archive...")
 	if err := extractZip(zipPath, extractDir); err != nil {
 		return fmt.Errorf("failed to extract AWS CLI: %w", err)
 	}
+	installer.FinishStep()
 
-	logger.Info("Installing AWS CLI...")
-	// Install AWS CLI
+	// Step 3: Install
+	installer.StartStep(2)
+	installer.UpdateStep("Running installation script (requires sudo)...")
 	installScript := filepath.Join(extractDir, "aws", "install")
 
 	// Make the install script executable
@@ -144,8 +171,9 @@ func installAWSCLILinux() error {
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to install AWS CLI: %w", err)
 	}
+	installer.FinishStep()
 
-	logger.Info("✅ AWS CLI installed successfully!")
+	installer.Finish()
 	return nil
 }
 
@@ -165,33 +193,40 @@ func installGoogleCloudCLI() error {
 
 // installGoogleCloudCLIWindows installs Google Cloud CLI on Windows
 func installGoogleCloudCLIWindows() error {
-	logger.Info("Installing Google Cloud CLI on Windows...")
+	steps := []utils.InstallationStep{
+		{Name: "Download", Description: "Downloading Google Cloud CLI installer"},
+		{Name: "Install", Description: "Installing Google Cloud CLI"},
+	}
+	installer := utils.NewMultiStepInstaller(steps)
 
-	// Download the installer
+	// Step 1: Download
+	installer.StartStep(0)
 	installerURL := "https://dl.google.com/dl/cloudsdk/channels/rapid/GoogleCloudSDKInstaller.exe"
 	installerPath := filepath.Join(os.TempDir(), "GoogleCloudSDKInstaller.exe")
 
-	if err := downloadFile(installerURL, installerPath); err != nil {
+	if err := downloadFileWithProgress(installerURL, installerPath, "Google Cloud CLI installer"); err != nil {
 		return fmt.Errorf("failed to download Google Cloud CLI installer: %w", err)
 	}
 	defer os.Remove(installerPath)
+	installer.FinishStep()
 
-	// Install silently
+	// Step 2: Install
+	installer.StartStep(1)
+	installer.UpdateStep("Running silent installer...")
 	cmd := exec.Command(installerPath, "/S")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to install Google Cloud CLI: %w", err)
 	}
+	installer.FinishStep()
 
-	logger.Info("✅ Google Cloud CLI installed successfully!")
+	installer.Finish()
 	return nil
 }
 
 // installGoogleCloudCLIMacOS installs Google Cloud CLI on macOS
 func installGoogleCloudCLIMacOS() error {
-	logger.Info("Installing Google Cloud CLI on macOS...")
+	spinner := utils.NewInstallSpinner("Installing Google Cloud CLI via install script...")
 
 	// Use the install script method for macOS
 	cmd := exec.Command("bash", "-c", "curl https://sdk.cloud.google.com | bash -s -- --disable-prompts")
@@ -199,17 +234,17 @@ func installGoogleCloudCLIMacOS() error {
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
+		spinner.Finish()
 		return fmt.Errorf("failed to install Google Cloud CLI: %w", err)
 	}
 
-	logger.Info("✅ Google Cloud CLI installed successfully!")
+	spinner.Finish()
+	fmt.Println("✅ Google Cloud CLI installed successfully!")
 	return nil
 }
 
 // installGoogleCloudCLILinux installs Google Cloud CLI on Linux
 func installGoogleCloudCLILinux() error {
-	logger.Info("Installing Google Cloud CLI on Linux...")
-
 	// Check if we can use package manager first
 	if commandExists("apt-get") {
 		return installGoogleCloudCLIDebian()
@@ -218,21 +253,32 @@ func installGoogleCloudCLILinux() error {
 	}
 
 	// Fall back to universal install script
+	spinner := utils.NewInstallSpinner("Installing Google Cloud CLI via install script...")
+
 	cmd := exec.Command("bash", "-c", "curl https://sdk.cloud.google.com | bash -s -- --disable-prompts")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
+		spinner.Finish()
 		return fmt.Errorf("failed to install Google Cloud CLI: %w", err)
 	}
 
-	logger.Info("✅ Google Cloud CLI installed successfully!")
+	spinner.Finish()
+	fmt.Println("✅ Google Cloud CLI installed successfully!")
 	return nil
 }
 
 // installGoogleCloudCLIDebian installs Google Cloud CLI on Debian/Ubuntu
 func installGoogleCloudCLIDebian() error {
-	logger.Info("Installing Google Cloud CLI using apt package manager...")
+	steps := []utils.InstallationStep{
+		{Name: "Update", Description: "Updating package lists"},
+		{Name: "Dependencies", Description: "Installing dependencies"},
+		{Name: "Key", Description: "Adding Google Cloud signing key"},
+		{Name: "Repository", Description: "Adding Google Cloud repository"},
+		{Name: "Install", Description: "Installing Google Cloud CLI"},
+	}
+	installer := utils.NewMultiStepInstaller(steps)
 
 	commands := [][]string{
 		{"apt-get", "update"},
@@ -243,29 +289,55 @@ func installGoogleCloudCLIDebian() error {
 		{"apt-get", "install", "-y", "google-cloud-cli"},
 	}
 
-	for _, cmdArgs := range commands {
+	stepIndex := 0
+	for i, cmdArgs := range commands {
+		if i == 0 || i == 4 {
+			installer.StartStep(stepIndex)
+			stepIndex++
+		} else if i == 1 {
+			installer.StartStep(stepIndex)
+			stepIndex++
+		} else if i == 2 {
+			installer.StartStep(stepIndex)
+			stepIndex++
+		} else if i == 3 {
+			installer.StartStep(stepIndex)
+			stepIndex++
+		} else if i == 5 {
+			installer.StartStep(stepIndex)
+		}
+
 		cmd := exec.Command("sudo", cmdArgs...)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to run command %v: %w", cmdArgs, err)
 		}
+
+		if i == 0 || i == 1 || i == 2 || i == 3 || i == 5 {
+			installer.FinishStep()
+		}
 	}
 
+	installer.Finish()
 	return nil
 }
 
 // installGoogleCloudCLIRedHat installs Google Cloud CLI on RedHat/CentOS/Fedora
 func installGoogleCloudCLIRedHat() error {
-	logger.Info("Installing Google Cloud CLI using dnf/yum package manager...")
-
 	packageManager := "dnf"
 	if !commandExists("dnf") {
 		packageManager = "yum"
 	}
 
-	commands := [][]string{
-		{"bash", "-c", `sudo tee -a /etc/yum.repos.d/google-cloud-sdk.repo << EOM
+	steps := []utils.InstallationStep{
+		{Name: "Repository", Description: "Adding Google Cloud repository"},
+		{Name: "Install", Description: "Installing Google Cloud CLI"},
+	}
+	installer := utils.NewMultiStepInstaller(steps)
+
+	// Step 1: Add repository
+	installer.StartStep(0)
+	installer.UpdateStep("Adding Google Cloud repository configuration...")
+	repoCmd := exec.Command("sudo", "bash", "-c", `sudo tee -a /etc/yum.repos.d/google-cloud-sdk.repo << EOM
 [google-cloud-cli]
 name=Google Cloud CLI
 baseurl=https://packages.cloud.google.com/yum/repos/cloud-sdk-el9-x86_64
@@ -273,19 +345,22 @@ enabled=1
 gpgcheck=1
 repo_gpgcheck=0
 gpgkey=https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
-EOM`},
-		{packageManager, "install", "-y", "google-cloud-cli"},
+EOM`)
+	if err := repoCmd.Run(); err != nil {
+		return fmt.Errorf("failed to add repository: %w", err)
 	}
+	installer.FinishStep()
 
-	for _, cmdArgs := range commands {
-		cmd := exec.Command("sudo", cmdArgs...)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to run command %v: %w", cmdArgs, err)
-		}
+	// Step 2: Install
+	installer.StartStep(1)
+	installer.UpdateStep(fmt.Sprintf("Installing via %s package manager...", packageManager))
+	installCmd := exec.Command("sudo", packageManager, "install", "-y", "google-cloud-cli")
+	if err := installCmd.Run(); err != nil {
+		return fmt.Errorf("failed to install Google Cloud CLI: %w", err)
 	}
+	installer.FinishStep()
 
+	installer.Finish()
 	return nil
 }
 
@@ -305,74 +380,84 @@ func installAzureCLI() error {
 
 // installAzureCLIWindows installs Azure CLI on Windows
 func installAzureCLIWindows() error {
-	logger.Info("Installing Azure CLI on Windows...")
-
 	// Try using winget first, fall back to MSI
 	if commandExists("winget") {
+		spinner := utils.NewInstallSpinner("Installing Azure CLI via winget...")
 		cmd := exec.Command("winget", "install", "--exact", "--id", "Microsoft.AzureCLI", "--silent")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err == nil {
-			logger.Info("✅ Azure CLI installed successfully!")
+			spinner.Finish()
+			fmt.Println("✅ Azure CLI installed successfully!")
 			return nil
 		}
+		spinner.Finish()
 		logger.Debug("winget failed, falling back to MSI installer")
 	}
 
 	// Fall back to MSI installer
+	steps := []utils.InstallationStep{
+		{Name: "Download", Description: "Downloading Azure CLI installer"},
+		{Name: "Install", Description: "Installing Azure CLI"},
+	}
+	installer := utils.NewMultiStepInstaller(steps)
+
+	// Step 1: Download
+	installer.StartStep(0)
 	msiURL := "https://aka.ms/installazurecliwindows"
 	msiPath := filepath.Join(os.TempDir(), "AzureCLI.msi")
 
-	if err := downloadFile(msiURL, msiPath); err != nil {
+	if err := downloadFileWithProgress(msiURL, msiPath, "Azure CLI installer"); err != nil {
 		return fmt.Errorf("failed to download Azure CLI installer: %w", err)
 	}
 	defer os.Remove(msiPath)
+	installer.FinishStep()
 
+	// Step 2: Install
+	installer.StartStep(1)
+	installer.UpdateStep("Running MSI installer...")
 	cmd := exec.Command("msiexec.exe", "/i", msiPath, "/quiet", "/norestart")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to install Azure CLI: %w", err)
 	}
+	installer.FinishStep()
 
-	logger.Info("✅ Azure CLI installed successfully!")
+	installer.Finish()
 	return nil
 }
 
 // installAzureCLIMacOS installs Azure CLI on macOS
 func installAzureCLIMacOS() error {
-	logger.Info("Installing Azure CLI on macOS...")
-
 	// Try using Homebrew first
 	if commandExists("brew") {
+		spinner := utils.NewInstallSpinner("Installing Azure CLI via Homebrew...")
 		cmd := exec.Command("brew", "install", "azure-cli")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err == nil {
-			logger.Info("✅ Azure CLI installed successfully!")
+			spinner.Finish()
+			fmt.Println("✅ Azure CLI installed successfully!")
 			return nil
 		}
+		spinner.Finish()
 		logger.Debug("Homebrew failed, falling back to install script")
 	}
 
 	// Fall back to install script
+	spinner := utils.NewInstallSpinner("Installing Azure CLI via install script...")
 	cmd := exec.Command("bash", "-c", "curl -L https://aka.ms/InstallAzureCli | bash")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
+		spinner.Finish()
 		return fmt.Errorf("failed to install Azure CLI: %w", err)
 	}
 
-	logger.Info("✅ Azure CLI installed successfully!")
+	spinner.Finish()
+	fmt.Println("✅ Azure CLI installed successfully!")
 	return nil
 }
 
 // installAzureCLILinux installs Azure CLI on Linux
 func installAzureCLILinux() error {
-	logger.Info("Installing Azure CLI on Linux...")
-
 	// Check if we can use package manager first
 	if commandExists("apt-get") {
 		return installAzureCLIDebian()
@@ -381,21 +466,31 @@ func installAzureCLILinux() error {
 	}
 
 	// Fall back to universal install script
+	spinner := utils.NewInstallSpinner("Installing Azure CLI via install script...")
 	cmd := exec.Command("bash", "-c", "curl -L https://aka.ms/InstallAzureCLIDeb | sudo bash")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
+		spinner.Finish()
 		return fmt.Errorf("failed to install Azure CLI: %w", err)
 	}
 
-	logger.Info("✅ Azure CLI installed successfully!")
+	spinner.Finish()
+	fmt.Println("✅ Azure CLI installed successfully!")
 	return nil
 }
 
 // installAzureCLIDebian installs Azure CLI on Debian/Ubuntu
 func installAzureCLIDebian() error {
-	logger.Info("Installing Azure CLI using apt package manager...")
+	steps := []utils.InstallationStep{
+		{Name: "Update", Description: "Updating package lists"},
+		{Name: "Dependencies", Description: "Installing dependencies"},
+		{Name: "Keys", Description: "Adding Microsoft signing keys"},
+		{Name: "Repository", Description: "Adding Azure CLI repository"},
+		{Name: "Install", Description: "Installing Azure CLI"},
+	}
+	installer := utils.NewMultiStepInstaller(steps)
 
 	commands := [][]string{
 		{"apt-get", "update"},
@@ -413,26 +508,46 @@ Signed-by: /etc/apt/keyrings/microsoft.gpg" | sudo tee /etc/apt/sources.list.d/a
 		{"apt-get", "install", "-y", "azure-cli"},
 	}
 
-	for _, cmdArgs := range commands {
+	stepMappings := []int{0, 1, 2, 2, 2, 3, 0, 4} // Map command indices to step indices
+	currentStep := -1
+
+	for i, cmdArgs := range commands {
+		targetStep := stepMappings[i]
+		if targetStep != currentStep {
+			if currentStep >= 0 {
+				installer.FinishStep()
+			}
+			installer.StartStep(targetStep)
+			currentStep = targetStep
+		}
+
 		cmd := exec.Command("sudo", cmdArgs...)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to run command %v: %w", cmdArgs, err)
 		}
 	}
 
+	if currentStep >= 0 {
+		installer.FinishStep()
+	}
+
+	installer.Finish()
 	return nil
 }
 
 // installAzureCLIRedHat installs Azure CLI on RedHat/CentOS/Fedora
 func installAzureCLIRedHat() error {
-	logger.Info("Installing Azure CLI using dnf/yum package manager...")
-
 	packageManager := "dnf"
 	if !commandExists("dnf") {
 		packageManager = "yum"
 	}
+
+	steps := []utils.InstallationStep{
+		{Name: "Keys", Description: "Importing Microsoft signing keys"},
+		{Name: "Repository", Description: "Adding Microsoft repository"},
+		{Name: "Install", Description: "Installing Azure CLI"},
+	}
+	installer := utils.NewMultiStepInstaller(steps)
 
 	commands := [][]string{
 		{"rpm", "--import", "https://packages.microsoft.com/keys/microsoft.asc"},
@@ -440,15 +555,16 @@ func installAzureCLIRedHat() error {
 		{packageManager, "install", "-y", "azure-cli"},
 	}
 
-	for _, cmdArgs := range commands {
+	for i, cmdArgs := range commands {
+		installer.StartStep(i)
 		cmd := exec.Command("sudo", cmdArgs...)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to run command %v: %w", cmdArgs, err)
 		}
+		installer.FinishStep()
 	}
 
+	installer.Finish()
 	return nil
 }
 
@@ -472,6 +588,63 @@ func downloadFile(url, filepath string) error {
 
 	_, err = io.Copy(out, resp.Body)
 	return err
+}
+
+// downloadFileWithProgress downloads a file with a beautiful progress bar
+func downloadFileWithProgress(url, filepath, description string) error {
+	// Get file size first
+	resp, err := http.Head(url)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to get file info: %s", resp.Status)
+	}
+
+	fileSize := resp.ContentLength
+
+	// Start actual download
+	resp, err = http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to download: %s", resp.Status)
+	}
+
+	// Create output file
+	out, err := os.Create(filepath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	// Create progress bar
+	var progressBar *utils.ProgressWriter
+	if fileSize > 0 {
+		// Known file size - use progress bar
+		bar := utils.NewDownloadProgressBar(fileSize, description)
+		progressBar = utils.NewProgressWriter(out, bar)
+	} else {
+		// Unknown file size - use spinner
+		spinner := utils.NewInstallSpinner(fmt.Sprintf("Downloading %s", description))
+		defer spinner.Finish()
+		_, err = io.Copy(out, resp.Body)
+		return err
+	}
+
+	// Copy with progress
+	_, err = io.Copy(progressBar, resp.Body)
+	if err != nil {
+		return err
+	}
+
+	// Finish the progress bar
+	progressBar.ProgressBar.Finish()
+	return nil
 }
 
 // extractZip extracts a zip file to destination directory using Go's built-in zip library
