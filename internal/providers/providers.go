@@ -43,9 +43,9 @@ func GetRegions(provider config.CloudProvider) ([]string, error) {
 
 // AWS authentication check
 func checkAWSAuth() error {
-	// Check if AWS CLI is installed
-	if !commandExists("aws") {
-		return fmt.Errorf("AWS CLI is not installed. Please install it from https://aws.amazon.com/cli/")
+	// Check if AWS CLI is installed, if not install it
+	if err := checkAndPromptInstall(config.AWS, "aws"); err != nil {
+		return fmt.Errorf("AWS CLI installation failed: %w", err)
 	}
 
 	// Check if user is authenticated by trying to get caller identity
@@ -65,9 +65,9 @@ func checkAWSAuth() error {
 
 // GCP authentication check
 func checkGCPAuth() error {
-	// Check if gcloud CLI is installed
-	if !commandExists("gcloud") {
-		return fmt.Errorf("Google Cloud CLI is not installed. Please install it from https://cloud.google.com/sdk/docs/install")
+	// Check if gcloud CLI is installed, if not install it
+	if err := checkAndPromptInstall(config.GCP, "gcloud"); err != nil {
+		return fmt.Errorf("Google Cloud CLI installation failed: %w", err)
 	}
 
 	// Check if user is authenticated
@@ -87,9 +87,9 @@ func checkGCPAuth() error {
 
 // Azure authentication check
 func checkAzureAuth() error {
-	// Check if Azure CLI is installed
-	if !commandExists("az") {
-		return fmt.Errorf("Azure CLI is not installed. Please install it from https://docs.microsoft.com/en-us/cli/azure/install-azure-cli")
+	// Check if Azure CLI is installed, if not install it
+	if err := checkAndPromptInstall(config.Azure, "az"); err != nil {
+		return fmt.Errorf("Azure CLI installation failed: %w", err)
 	}
 
 	// Check if user is authenticated

@@ -23,6 +23,13 @@ CloudDeploy is an enterprise-grade CLI tool that intelligently detects your appl
 - **No Hardcoded Secrets**: Environment-based configuration
 - **Audit Trail**: Complete logging for compliance and troubleshooting
 
+### 🔧 **Automatic CLI Management**
+- **Auto-Detection**: Checks for required cloud provider CLI tools
+- **Smart Installation**: Automatically installs aws-cli, gcloud, or az-cli if missing
+- **Cross-Platform**: Works on Windows, macOS, and Linux
+- **No Dependencies**: Uses native package managers when available, falls back to universal methods
+- **User Choice**: Always prompts before installing new tools
+
 ### 🎯 **User Experience**
 - **Interactive Setup**: Guided configuration with smart defaults
 - **Progress Feedback**: Real-time deployment status updates
@@ -34,7 +41,9 @@ CloudDeploy is an enterprise-grade CLI tool that intelligently detects your appl
 ### Prerequisites
 - Go 1.19+ 
 - Terraform 1.0+
-- Cloud provider CLI tools (aws-cli, gcloud, az-cli)
+- **Cloud provider CLI tools are automatically installed if missing!**
+  - CloudDeploy will detect and install aws-cli, gcloud, or az-cli as needed
+  - No need to manually install these tools beforehand
 
 ### Quick Install
 ```bash
@@ -109,7 +118,7 @@ CloudDeploy CLI
 │   ├── config/            # Configuration management
 │   ├── logger/            # Structured logging (logrus)
 │   ├── project/           # 🎯 Intelligent project analysis
-│   ├── providers/         # Cloud provider authentication
+│   ├── providers/         # Cloud provider authentication & CLI auto-install
 │   ├── terraform/         # Terraform operations and templates
 │   └── utils/             # Utility functions and prompts
 └── Makefile              # Production-ready build system
@@ -175,72 +184,11 @@ make security          # Security scanning
 ## 🔧 Development
 
 ### Build System
-```bash
-make build              # Quick local build
-make build-production   # Security-hardened production build
-make build-all          # Cross-platform builds
-make pre-commit         # Complete pre-commit checks
-make release-check      # Production readiness verification
-```
-
-### Supported Platforms
-- **Linux**: amd64, arm64
-- **macOS**: amd64 (Intel), arm64 (Apple Silicon)
-- **Windows**: amd64
-
-### Code Quality
-- **Formatting**: `go fmt` with `goimports`
-- **Linting**: `go vet`, `golangci-lint`, `staticcheck`
-- **Security**: `gosec`, `govulncheck`
-- **Dependencies**: Go modules with minimal external dependencies
-
-## 🔐 Security Features
-
-### ✅ Production Security Checklist
-- [x] **Authentication Verification**: Pre-deployment cloud provider checks
-- [x] **Input Validation**: All user inputs sanitized to prevent injection
-- [x] **Secure Builds**: PIE binaries with stripped symbols
-- [x] **No Hardcoded Secrets**: Environment-based configuration only
-- [x] **Error Message Sanitization**: No sensitive data in error outputs
-- [x] **Temporary File Cleanup**: Secure handling of Terraform files
-- [x] **Race Condition Testing**: All code tested with `-race` flag
-- [x] **Vulnerability Scanning**: Regular security scans with latest tools
-
-### Security Commands
-```bash
-# Run security scans
-make security
-
-# Manual security checks
-go vet ./...
-gosec ./...
-govulncheck ./...
-go test -race ./...
-```
-
-## 🚀 Deployment Workflow
-
-```mermaid
-graph TD
-    A[clouddeploy deploy] --> B[Load Configuration]
-    B --> C[Analyze Project Type]
-    C --> D[Verify Cloud Authentication]
-    D --> E[Generate Terraform Templates]
-    E --> F[Create Temporary Directory]
-    F --> G[Run Terraform Init]
-    G --> H[Run Terraform Plan]
-    H --> I{User Approval}
-    I -->|Yes| J[Run Terraform Apply]
-    I -->|No| K[Cancel Deployment]
-    J --> L[Display Outputs]
-    L --> M[Cleanup Temporary Files]
-    K --> M
-    M --> N[Complete]
 ```
 
 ## 📊 Examples
 
-### Deploy a Node.js App to AWS
+### Deploy a Node.js App to AWS (with automatic AWS CLI installation)
 ```bash
 # Initialize (auto-detects Node.js from package.json)
 clouddeploy init
@@ -248,6 +196,12 @@ clouddeploy init
 > App type: nodejs (detected with high confidence)
 > Cloud provider: aws
 > Region: us-east-1
+> ⚠️ AWS CLI is not installed
+> 🔧 CloudDeploy can automatically install AWS CLI for you
+> Would you like to install AWS CLI now? (y/N) y
+> 🔧 Installing AWS CLI automatically...
+> Installing AWS CLI on macOS...
+> ✅ AWS CLI installed successfully!
 > Enable database? yes
 > Enable storage? no
 > Enable load balancer? yes
@@ -255,7 +209,7 @@ clouddeploy init
 # Deploy
 clouddeploy deploy
 > 🔍 Analyzing project... ✅ Confirmed Node.js
-> 🔐 Verifying AWS authentication... ✅ Connected
+> 🔐 Verifying AWS authentication... Please run 'aws configure' first
 > 📄 Generating Terraform configuration... ✅ Generated
 > 🔧 Initializing Terraform... ✅ Initialized
 > 📋 Running Terraform plan... 
@@ -271,6 +225,10 @@ clouddeploy init
 > App type: flask (detected from app.py)
 > Cloud provider: gcp
 > Region: us-central1
+> ⚠️ Google Cloud CLI is not installed
+> 🔧 CloudDeploy can automatically install Google Cloud CLI for you
+> Would you like to install Google Cloud CLI now? (y/N) y
+> ✅ Google Cloud CLI installed successfully!
 
 clouddeploy deploy --auto-approve
 > 🎯 Detected Flask app with high confidence
@@ -292,77 +250,43 @@ clouddeploy deploy
 > ✅ Site available at: https://myportfolio.azureedge.net
 ```
 
-## 🛠️ Advanced Usage
-
-### Custom Configuration
-```bash
-# Use custom config file
-clouddeploy deploy --config ./production.json
-
-# Enable verbose logging
-clouddeploy deploy --verbose
-
-# Deploy with custom region override
-CLOUDDEPLOY_REGION=eu-west-1 clouddeploy deploy
-```
-
-### CI/CD Integration
-```yaml
-# GitHub Actions example
-- name: Deploy to AWS
-  run: |
-    clouddeploy deploy --auto-approve
-  env:
-    AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-    AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-```
-
-## 📈 Performance & Monitoring
-
-### Metrics
-- **Binary Size**: ~11MB (statically linked)
-- **Startup Time**: <100ms
-- **Memory Usage**: <50MB peak during deployment
-- **Dependencies**: Minimal external dependencies
-
-### Monitoring
-- **Structured Logging**: JSON output for log aggregation
-- **Error Tracking**: Comprehensive error context
-- **Audit Trail**: All actions logged for compliance
-- **Performance Profiling**: Built-in benchmarking support
-
 ## 🔧 Troubleshooting
 
 ### Common Issues
 
+#### CLI Installation Issues
+CloudDeploy automatically handles CLI installation, but if you encounter issues:
+
+```bash
+# Manual verification after auto-install
+aws --version     # Should show AWS CLI v2.x
+gcloud version    # Should show Google Cloud SDK
+az --version      # Should show Azure CLI
+
+# If auto-install fails, you can install manually:
+# AWS: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
+# GCP: https://cloud.google.com/sdk/docs/install
+# Azure: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli
+```
+
 #### Authentication Failures
+After CLI installation, you'll need to authenticate:
+
 ```bash
-# Check AWS credentials
-aws sts get-caller-identity
+# AWS
+aws configure  # or aws sso login
 
-# Check GCP credentials  
-gcloud auth list
+# GCP  
+gcloud auth login
 
-# Check Azure credentials
-az account show
+# Azure
+az login
 ```
 
-#### Project Detection Issues
-```bash
-# Force specific app type
-clouddeploy init
-> Override detected type? yes
-> App type: docker
-```
-
-#### Terraform Errors
-```bash
-# Debug with verbose logging
-clouddeploy deploy --verbose
-
-# Plan-only mode for troubleshooting
-clouddeploy deploy --plan-only
-```
+#### Platform-Specific Notes
+- **Windows**: Requires PowerShell or Command Prompt with admin privileges for installation
+- **macOS**: May require `sudo` password for CLI installation
+- **Linux**: Supports both package managers (apt, dnf, yum) and universal install scripts
 
 ### Getting Help
 ```bash

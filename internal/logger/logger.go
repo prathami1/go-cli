@@ -81,3 +81,17 @@ func Fatalf(format string, args ...interface{}) {
 		Log.Fatalf(format, args...)
 	}
 }
+
+// Warn logs a warning message
+func Warn(args ...interface{}) {
+	if Log != nil {
+		Log.Warn(args...)
+	}
+}
+
+// Warnf logs a formatted warning message
+func Warnf(format string, args ...interface{}) {
+	if Log != nil {
+		Log.Warnf(format, args...)
+	}
+}
