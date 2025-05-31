@@ -292,8 +292,35 @@ az --version      # Should show Azure CLI
 # Azure: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli
 ```
 
-#### Authentication Failures
-After CLI installation, you'll need to authenticate:
+#### Authentication (Bloomberg Employees)
+CloudDeploy now **automatically handles authentication** for you! 🎉
+
+When you run `clouddeploy init` or `clouddeploy deploy`, the tool will:
+1. **Detect your Bloomberg environment** automatically
+2. **Launch the appropriate SSO flow** for your cloud provider
+3. **Guide you through the process** with Bloomberg-specific instructions
+
+**For Bloomberg employees using Azure:**
+- Uses device code flow for better enterprise SSO compatibility
+- Prompts you to have your B-Unit or B-Unit phone app ready
+- Automatically handles CORP credential authentication
+
+**For Bloomberg employees using AWS:**
+- Attempts AWS SSO login first (most common for enterprise)
+- Falls back to standard AWS configure if needed
+- Integrates with Bloomberg's enterprise AWS setup
+
+**For Bloomberg employees using GCP:**
+- Uses enterprise-friendly authentication options
+- Integrates with your CORP credentials
+
+**What you need:**
+- Your CORP username and password (same as your PC login)
+- Your B-Unit device or B-Unit phone app for 2FA
+- Access to the cloud provider through Bloomberg's enterprise setup
+
+#### Authentication Failures (Non-Bloomberg or Fallback)
+If automatic authentication fails, you can still authenticate manually:
 
 ```bash
 # AWS

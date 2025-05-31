@@ -108,8 +108,9 @@ func runInit() error {
 
 	// Check if user is authenticated with the selected cloud provider
 	if err := providers.CheckAuthentication(config.CloudProvider(cloudProvider)); err != nil {
-		logger.Errorf("Authentication check failed: %v", err)
-		logger.Info("Please authenticate with your cloud provider and try again.")
+		logger.Errorf("Authentication failed: %v", err)
+		logger.Info("💡 The authentication process was attempted automatically.")
+		logger.Info("If you're a Bloomberg employee, make sure your CORP credentials and B-Unit are ready.")
 		return err
 	}
 
