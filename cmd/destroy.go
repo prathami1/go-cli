@@ -15,7 +15,7 @@ import (
 var destroyCmd = &cobra.Command{
 	Use:   "destroy",
 	Short: "Destroy the deployed infrastructure",
-	Long: `Destroy the infrastructure that was deployed using 'clouddeploy deploy'.
+	Long: `Destroy the infrastructure that was deployed using 'cdeploy deploy'.
 
 This command will:
 1. Load your configuration from .clouddeploy.json
@@ -72,7 +72,7 @@ func runDestroy(cmd *cobra.Command) error {
 	// Check if the terraform directory exists
 	terraformDir := terraform.TerraformWorkingDir
 	if _, err := os.Stat(terraformDir); os.IsNotExist(err) {
-		return fmt.Errorf("no terraform configuration found. Run 'clouddeploy deploy' first")
+		return fmt.Errorf("no terraform configuration found. Run 'cdeploy deploy' first")
 	}
 
 	// Run Terraform destroy

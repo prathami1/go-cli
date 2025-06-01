@@ -71,7 +71,7 @@ func LoadConfig() (*DeploymentConfig, error) {
 	configPath := ".clouddeploy.json"
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("no configuration file found. Run 'clouddeploy init' first")
+		return nil, fmt.Errorf("no configuration file found. Run 'cdeploy start' first")
 	}
 
 	data, err := os.ReadFile(configPath)

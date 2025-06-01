@@ -60,7 +60,7 @@ cd clouddeploy-cli
 make build-production
 
 # Install to your PATH
-sudo cp ./bin/clouddeploy /usr/local/bin/
+sudo cp ./bin/cdeploy /usr/local/bin/
 ```
 
 ### Development Setup
@@ -77,37 +77,67 @@ make test-all
 
 ## 🎯 Quick Start
 
-### 1. Initialize Your Project
+### 1. Deploy Your Application (One Command!)
 ```bash
 # Navigate to your project directory
 cd my-awesome-app
 
-# Initialize CloudDeploy (auto-detects project type)
-clouddeploy init
+# Start CloudDeploy - this does everything: configuration + deployment!
+cdeploy start
 ```
 
-### 2. Deploy to the Cloud
-```bash
-# Deploy with interactive confirmation
-clouddeploy deploy
+**That's it!** 🎉 The `start` command will:
+1. **Auto-detect your project type** (Node.js, Flask, Docker, etc.)
+2. **Prompt for cloud provider** and region selection
+3. **Configure services** (database, storage, load balancer)
+4. **Auto-install cloud CLI tools** if needed (aws-cli, gcloud, az-cli)
+5. **Authenticate via OAuth** (opens browser for authentication)
+6. **Generate Terraform configuration**
+7. **Deploy your infrastructure** automatically
+8. **Display application URLs** and connection info
 
-# Deploy automatically (for CI/CD)
-clouddeploy deploy --auto-approve
+### 2. Alternative Workflows
+
+#### Configuration Only (Skip Deployment)
+```bash
+# Just set up configuration without deploying
+cdeploy start --config-only
+
+# Deploy later when ready
+cdeploy deploy
+```
+
+#### Fully Automated (CI/CD Ready)
+```bash
+# Skip all prompts and deploy automatically
+cdeploy start --auto-approve
+```
+
+#### Manual Two-Step Process
+```bash
+# Step 1: Configuration
+cdeploy start --config-only
+
+# Step 2: Deploy with confirmation
+cdeploy deploy
+
+# Or deploy automatically
+cdeploy deploy --auto-approve
 
 # Preview changes only
-clouddeploy deploy --plan-only
+cdeploy deploy --plan-only
 ```
 
 ### 3. Manage Your Infrastructure
 ```bash
 # View deployment status
-clouddeploy deploy --plan-only
+cdeploy deploy --plan-only
 
 # Destroy infrastructure
-clouddeploy destroy
+cdeploy destroy
 
 # Get help
-clouddeploy --help
+cdeploy --help
 ```
 
 ## 🏗️ Architecture
@@ -116,7 +146,7 @@ clouddeploy --help
 CloudDeploy CLI
 ├── cmd/                    # Cobra commands
 │   ├── root.go            # Root command and global configuration
-│   ├── init.go            # Interactive project initialization
+│   ├── start.go           # Interactive project configuration
 │   ├── deploy.go          # Enhanced deployment with project analysis
 │   └── destroy.go         # Infrastructure teardown
 ├── internal/
@@ -173,14 +203,19 @@ export CLOUDDEPLOY_CONFIG_PATH=./custom-config.json
 
 ## 📊 Examples
 
-### Deploy a Node.js App to AWS (with automatic AWS CLI installation)
+### Deploy a Node.js App to AWS (Everything in One Command!)
 ```bash
-# Initialize (auto-detects Node.js from package.json)
-clouddeploy init
-> Project name: my-node-app
-> App type: nodejs (detected with high confidence)
-> Cloud provider: aws
-> Region: us-east-1
+# Navigate to your project directory (containing package.json)
+cd my-node-app
+
+# One command does it all!
+cdeploy start
+> 🔍 Analyzing your project...
+> 🎯 Detected nodejs project with high confidence
+> Use detected app type 'nodejs'? yes
+> Use 'my-node-app' as project name? yes
+> Select cloud provider: aws
+> Select region: us-east-1
 > ⚠️ AWS CLI is not installed
 > 🔧 CloudDeploy can automatically install AWS CLI for you
 > Would you like to install AWS CLI now? (y/N) y
@@ -196,26 +231,45 @@ clouddeploy init
 > Enable database? yes
 > Enable storage? no
 > Enable load balancer? yes
-
-# Deploy
-clouddeploy deploy
+> 🔐 Checking cloud provider authentication...
+> 🚀 Starting AWS authentication flow...
+> [Browser opens for OAuth authentication]
+> ✅ AWS authentication verified!
+> 
+> ✅ Configuration saved successfully!
+> 📋 Configuration Summary:
+>    Project: my-node-app
+>    Type: nodejs
+>    Provider: aws
+>    Region: us-east-1
+>    Database: true
+>    Storage: false
+>    Load Balancer: true
+> 
+> 🚀 Proceeding to deployment...
 > 🔍 Analyzing project... ✅ Confirmed Node.js
-> 🔐 Verifying AWS authentication... Please run 'aws configure' first
 > 📄 Generating Terraform configuration... ✅ Generated
 > 🔧 Initializing Terraform... ✅ Initialized
 > 📋 Running Terraform plan... 
 > Apply changes? yes
 > 🚀 Deploying infrastructure... ✅ Complete!
 > 📊 App URL: https://my-node-app-alb-123456789.us-east-1.elb.amazonaws.com
+> 🎉 Deployment completed successfully!
+> ✨ Your application has been configured and deployed in one command!
 ```
 
 ### Deploy a Flask App to GCP
 ```bash
-clouddeploy init
-> Project name: my-flask-api
-> App type: flask (detected from app.py)
-> Cloud provider: gcp
-> Region: us-central1
+# Navigate to your Flask project directory
+cd my-flask-api
+
+# One command for everything
+cdeploy start
+> 🎯 Detected flask project with high confidence
+> Use detected app type 'flask'? yes
+> Use 'my-flask-api' as project name? yes
+> Select cloud provider: gcp
+> Select region: us-central1
 > ⚠️ Google Cloud CLI is not installed
 > 🔧 CloudDeploy can automatically install Google Cloud CLI for you
 > Would you like to install Google Cloud CLI now? (y/N) y
@@ -233,24 +287,33 @@ clouddeploy init
 ✅ Install completed!
 🎉 Installation completed successfully!
 
-clouddeploy deploy --auto-approve
-> 🎯 Detected Flask app with high confidence
-> 🚀 Deploying to Google Cloud Platform...
+> Enable database? yes
+> Enable storage? yes
+> Enable load balancer? no
+> 🔐 Checking cloud provider authentication...
+> [Authentication and deployment happens automatically]
 > ✅ Deployment complete!
+> 📊 API URL: https://my-flask-api-xxx.run.app
 ```
 
 ### Deploy a Static Site to Azure
 ```bash
-clouddeploy init
-> Project name: my-portfolio
-> App type: static-site (detected from index.html)
-> Cloud provider: azure
-> Region: eastus
+cd my-portfolio
 
-clouddeploy deploy
+# For static sites, even simpler!
+cdeploy start --auto-approve
 > 🔍 Static site detected: index.html, style.css, script.js
 > 📄 Generating Azure Storage + CDN configuration...
 > ✅ Site available at: https://myportfolio.azureedge.net
+```
+
+### Just Configuration (No Deployment)
+```bash
+# If you want to set up config but deploy later
+cdeploy start --config-only
+
+# Then deploy when ready
+cdeploy deploy
 ```
 
 ---
@@ -321,20 +384,20 @@ Make sure you have:
 
 ### Before (Manual Process)
 ```bash
-clouddeploy init
+cdeploy start
 > ERRO Authentication check failed: not authenticated with Azure. Please run 'az login'
 > INFO Please authenticate with your cloud provider and try again.
-> FATA Initialization failed: not authenticated with Azure. Please run 'az login'
+> FATA Configuration setup failed: not authenticated with Azure. Please run 'az login'
 
 # You had to manually run:
 az login
-# Then run clouddeploy again
-clouddeploy init
+# Then run cdeploy again
+cdeploy start
 ```
 
 ### After (Automatic Process)
 ```bash
-clouddeploy init
+cdeploy start
 > 🔐 Not authenticated with Azure. Initiating automatic login...
 > 🚀 Starting Azure authentication flow...
 > 💼 Detected Bloomberg environment. Using enterprise SSO authentication...
@@ -343,7 +406,7 @@ clouddeploy init
 > 🖥️  Using device code flow for enterprise compatibility...
 > [Authentication flow opens automatically]
 > ✅ Bloomberg Azure authentication successful!
-> [Continues with clouddeploy init...]
+> [Continues with cdeploy start...]
 ```
 
 ---
@@ -372,7 +435,7 @@ az --version      # Should show Azure CLI
 #### For Bloomberg Employees
 CloudDeploy now **automatically handles authentication** for you! 🎉
 
-When you run `clouddeploy init` or `clouddeploy deploy`, the tool will:
+When you run `cdeploy start` or `cdeploy deploy`, the tool will:
 1. **Detect your Bloomberg environment** automatically
 2. **Launch the appropriate SSO flow** for your cloud provider
 3. **Guide you through the process** with Bloomberg-specific instructions
@@ -407,14 +470,78 @@ export BLOOMBERG_ENV=true
 
 ### Getting Help
 ```bash
-clouddeploy --help           # General help
-clouddeploy init --help      # Init command help
-clouddeploy deploy --help    # Deploy command help
+cdeploy --help           # General help
+cdeploy start --help     # Start command help
+cdeploy deploy --help    # Deploy command help
 ```
 
 ---
 
-# 📋 Changelog
+# �� Changelog
+
+## [v2.1.0] - 2024-12-XX - Complete One-Command Workflow
+
+### 🎉 Major New Features
+
+#### **One-Command Deployment Workflow**
+- **Restored `init` functionality!** The `start` command now does everything in one go, just like the old `init` command
+- **Complete automation** - From project detection to live deployment in a single command
+- **No more manual steps** - Setup configuration AND deploy automatically
+- **Smart defaults** - Minimal prompting with intelligent project detection
+
+### ✨ Enhanced Features
+
+#### **New `start` Command Capabilities**
+- **Auto-detection and deployment** - Detects project type and deploys immediately
+- **Configuration + Deployment** - Single command handles the entire workflow
+- **Interactive prompts** - Guides you through setup with smart suggestions
+- **Automatic authentication** - Launches OAuth flows and installs CLI tools as needed
+
+#### **Flexible Options**
+- **`--config-only`** flag - Set up configuration without deploying (old behavior)
+- **`--auto-approve`** flag - Skip all confirmations for CI/CD pipelines
+- **Smart project detection** - Auto-detects Node.js, Flask, Docker, static sites
+
+#### **Improved User Experience**
+- **Single command simplicity** - `cdeploy start` does everything
+- **Clear progress feedback** - Step-by-step progress with emoji indicators
+- **Better error messages** - More helpful guidance when things go wrong
+- **Deployment success summary** - Shows URLs and next steps after deployment
+
+### 🔧 Technical Improvements
+
+#### **Code Organization**
+- **Unified deployment logic** - Shared code between `start` and `deploy` commands
+- **Better error handling** - Comprehensive error recovery and user guidance
+- **Modular functions** - Cleaner separation of concerns
+
+### 🚀 Usage Examples
+
+#### **Before (Old Two-Step Process)**
+```bash
+cdeploy start     # Configuration only
+cdeploy deploy    # Separate deployment step
+```
+
+#### **After (New One-Command Process)**
+```bash
+cdeploy start     # Does everything: config + deployment!
+```
+
+### 💡 Migration Guide
+
+- **No breaking changes** - All existing commands still work
+- **`start` now deploys** - New default behavior includes deployment
+- **Use `--config-only`** - If you want the old behavior of configuration only
+- **Bloomberg authentication** - Still works automatically as before
+
+### 🔗 Related
+- Maintains backward compatibility with existing workflows
+- Supports all cloud providers (AWS, GCP, Azure)
+- Works with Bloomberg enterprise authentication
+- Supports all project types (Node.js, Flask, Docker, static sites)
+
+---
 
 ## [v2.0.0] - 2024-12-XX - Bloomberg Enterprise Authentication
 
@@ -469,7 +596,7 @@ clouddeploy deploy --help    # Deploy command help
 
 ### 📝 Updated Files
 - `internal/providers/providers.go` - Complete authentication overhaul
-- `cmd/init.go` - Updated error messaging
+- `cmd/start.go` - Updated error messaging (renamed from init.go)
 - `cmd/deploy.go` - Updated error messaging  
 - `README.md` - Enhanced troubleshooting section
 
@@ -481,15 +608,15 @@ clouddeploy deploy --help    # Deploy command help
 
 #### Before (Manual)
 ```bash
-clouddeploy init
+cdeploy start
 # ERROR: not authenticated with Azure. Please run 'az login'
 az login
-clouddeploy init
+cdeploy start
 ```
 
 #### After (Automatic)
 ```bash
-clouddeploy init
+cdeploy start
 # 🔐 Not authenticated with Azure. Initiating automatic login...
 # 💼 Detected Bloomberg environment...
 # [Authentication happens automatically]

@@ -27,7 +27,7 @@ This command will:
 4. Run terraform init, plan, and apply
 5. Output deployment information (URLs, credentials, etc.)
 
-Make sure you have run 'clouddeploy init' first to create your configuration.`,
+Make sure you have run 'cdeploy start' first to create your configuration.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := runDeploy(cmd); err != nil {
 			logger.Fatalf("Deployment failed: %v", err)
@@ -49,7 +49,7 @@ func runDeploy(cmd *cobra.Command) error {
 	// Load configuration
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w. Run 'clouddeploy init' first", err)
+		return fmt.Errorf("failed to load configuration: %w. Run 'cdeploy start' first", err)
 	}
 
 	logger.Infof("📝 Loaded configuration for project: %s", cfg.ProjectName)

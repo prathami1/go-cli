@@ -17,13 +17,13 @@ var (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "clouddeploy",
-	Short: "A multi-cloud deployment tool for cloud applications",
+	Use:   "cdeploy",
+	Short: "CloudDeploy - Multi-cloud deployment CLI",
 	Long: `CloudDeploy is a CLI tool that helps cloud employees deploy applications
-to AWS, Azure, or GCP using Terraform under the hood.
+to AWS, GCP, or Azure with intelligent project detection and automatic configuration.
 
-It supports various application types and can automatically generate
-Terraform configurations based on your requirements.`,
+It analyzes your project to determine the best deployment strategy and guides you
+through the setup process with smart defaults and enterprise authentication.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },

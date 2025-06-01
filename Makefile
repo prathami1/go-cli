@@ -1,226 +1,284 @@
 # CloudDeploy CLI Makefile
 
-# Variables
-BINARY_NAME=clouddeploy
-MAIN_PACKAGE=.
-BUILD_DIR=./bin
-VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-BUILD_TIME=$(shell date -u '+%Y-%m-%d_%H:%M:%S')
-BUILD_USER=$(shell whoami)
-GIT_COMMIT=$(shell git rev-parse HEAD 2>/dev/null || echo "unknown")
+BINARY_NAME=cdeploy
+VERSION=v1.0.0
+GO_VERSION=1.21
+MAIN_PATH=main.go
 
-# Build flags for production
-LDFLAGS=-ldflags "-s -w -X main.version=$(VERSION) -X main.buildTime=$(BUILD_TIME) -X main.buildUser=$(BUILD_USER) -X main.gitCommit=$(GIT_COMMIT)"
+# Build directories
+BUILD_DIR=bin
+DIST_DIR=dist
+
+# Go build flags for production
+PROD_LDFLAGS=-w -s -X main.Version=$(VERSION)
+DEV_LDFLAGS=-X main.Version=$(VERSION)-dev
+
+# Security flags
+SECURITY_FLAGS=-buildmode=pie
+CGO_ENABLED=0
+
+# Colors for output
+RED=\033[0;31m
+GREEN=\033[0;32m
+YELLOW=\033[1;33m
+BLUE=\033[0;34m
+NC=\033[0m # No Color
+
+.PHONY: all build build-production build-dev test test-all test-coverage \
+        test-race test-integration clean deps install-tools security \
+        release release-all dev-setup help lint format tidy
 
 # Default target
-.PHONY: all
-all: clean build
+all: build
 
-# Build the binary
-.PHONY: build
-build:
-	@echo "Building $(BINARY_NAME)..."
+# === BUILD TARGETS ===
+
+## Build for development (with debug symbols)
+build: build-dev
+
+## Build for development (faster builds, debug symbols)
+build-dev:
+	@echo "$(BLUE)Building $(BINARY_NAME) for development...$(NC)"
 	@mkdir -p $(BUILD_DIR)
-	go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) $(MAIN_PACKAGE)
-	@echo "Binary built: $(BUILD_DIR)/$(BINARY_NAME)"
+	CGO_ENABLED=$(CGO_ENABLED) go build \
+		-ldflags="$(DEV_LDFLAGS)" \
+		-o $(BUILD_DIR)/$(BINARY_NAME) \
+		$(MAIN_PATH)
+	@echo "$(GREEN)✅ Development build complete: $(BUILD_DIR)/$(BINARY_NAME)$(NC)"
 
-# Build for current platform (quick build)
-.PHONY: build-local
-build-local:
-	@echo "Building $(BINARY_NAME) for local development..."
-	go build -o $(BINARY_NAME) $(MAIN_PACKAGE)
-	@echo "Binary built: ./$(BINARY_NAME)"
-
-# Build for multiple platforms
-.PHONY: build-all
-build-all: clean
-	@echo "Building for multiple platforms..."
+## Build for production (optimized, stripped)
+build-production:
+	@echo "$(BLUE)Building $(BINARY_NAME) for production...$(NC)"
 	@mkdir -p $(BUILD_DIR)
+	CGO_ENABLED=$(CGO_ENABLED) go build \
+		$(SECURITY_FLAGS) \
+		-ldflags="$(PROD_LDFLAGS)" \
+		-trimpath \
+		-o $(BUILD_DIR)/$(BINARY_NAME) \
+		$(MAIN_PATH)
+	@echo "$(GREEN)✅ Production build complete: $(BUILD_DIR)/$(BINARY_NAME)$(NC)"
+	@echo "$(YELLOW)Binary size: $(shell du -h $(BUILD_DIR)/$(BINARY_NAME) | cut -f1)$(NC)"
+
+## Build for all major platforms
+build-all: clean-dist
+	@echo "$(BLUE)Building $(BINARY_NAME) for all platforms...$(NC)"
+	@mkdir -p $(DIST_DIR)
 	
 	# Linux AMD64
-	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 $(MAIN_PACKAGE)
+	@echo "$(YELLOW)Building for Linux AMD64...$(NC)"
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=$(CGO_ENABLED) go build \
+		$(SECURITY_FLAGS) \
+		-ldflags="$(PROD_LDFLAGS)" \
+		-trimpath \
+		-o $(DIST_DIR)/$(BINARY_NAME)-linux-amd64 \
+		$(MAIN_PATH)
 	
 	# Linux ARM64
-	GOOS=linux GOARCH=arm64 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 $(MAIN_PACKAGE)
+	@echo "$(YELLOW)Building for Linux ARM64...$(NC)"
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=$(CGO_ENABLED) go build \
+		$(SECURITY_FLAGS) \
+		-ldflags="$(PROD_LDFLAGS)" \
+		-trimpath \
+		-o $(DIST_DIR)/$(BINARY_NAME)-linux-arm64 \
+		$(MAIN_PATH)
 	
 	# macOS AMD64
-	GOOS=darwin GOARCH=amd64 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64 $(MAIN_PACKAGE)
+	@echo "$(YELLOW)Building for macOS AMD64...$(NC)"
+	GOOS=darwin GOARCH=amd64 CGO_ENABLED=$(CGO_ENABLED) go build \
+		$(SECURITY_FLAGS) \
+		-ldflags="$(PROD_LDFLAGS)" \
+		-trimpath \
+		-o $(DIST_DIR)/$(BINARY_NAME)-darwin-amd64 \
+		$(MAIN_PATH)
 	
 	# macOS ARM64 (Apple Silicon)
-	GOOS=darwin GOARCH=arm64 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 $(MAIN_PACKAGE)
+	@echo "$(YELLOW)Building for macOS ARM64...$(NC)"
+	GOOS=darwin GOARCH=arm64 CGO_ENABLED=$(CGO_ENABLED) go build \
+		$(SECURITY_FLAGS) \
+		-ldflags="$(PROD_LDFLAGS)" \
+		-trimpath \
+		-o $(DIST_DIR)/$(BINARY_NAME)-darwin-arm64 \
+		$(MAIN_PATH)
 	
 	# Windows AMD64
-	GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe $(MAIN_PACKAGE)
+	@echo "$(YELLOW)Building for Windows AMD64...$(NC)"
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=$(CGO_ENABLED) go build \
+		-ldflags="$(PROD_LDFLAGS)" \
+		-trimpath \
+		-o $(DIST_DIR)/$(BINARY_NAME)-windows-amd64.exe \
+		$(MAIN_PATH)
 	
-	@echo "All binaries built in $(BUILD_DIR)/"
+	@echo "$(GREEN)✅ Multi-platform build complete in $(DIST_DIR)/$(NC)"
+	@ls -la $(DIST_DIR)/
 
-# Run tests
-.PHONY: test
+# === CLEAN TARGETS ===
+
+## Remove build artifacts and config files
+clean:
+	@echo "$(YELLOW)Cleaning build artifacts...$(NC)"
+	@rm -rf $(BUILD_DIR)
+	@rm -rf $(DIST_DIR)
+	@rm -f .clouddeploy.json
+	@rm -rf .clouddeploy-tf
+	@echo "$(GREEN)✅ Clean complete$(NC)"
+
+## Remove only distribution artifacts
+clean-dist:
+	@echo "$(YELLOW)Cleaning distribution artifacts...$(NC)"
+	@rm -rf $(DIST_DIR)
+
+# === DEPENDENCY MANAGEMENT ===
+
+## Download and verify dependencies
+deps:
+	@echo "$(BLUE)Downloading dependencies...$(NC)"
+	go mod download
+	go mod verify
+	@echo "$(GREEN)✅ Dependencies ready$(NC)"
+
+## Update dependencies
+deps-update:
+	@echo "$(BLUE)Updating dependencies...$(NC)"
+	go get -u ./...
+	go mod tidy
+	@echo "$(GREEN)✅ Dependencies updated$(NC)"
+
+## Tidy up go.mod and go.sum
+tidy:
+	@echo "$(BLUE)Tidying dependencies...$(NC)"
+	go mod tidy
+	@echo "$(GREEN)✅ Dependencies tidied$(NC)"
+
+# === TESTING TARGETS ===
+
+## Run unit tests
 test:
-	@echo "Running tests..."
+	@echo "$(BLUE)Running unit tests...$(NC)"
 	go test -v ./...
+	@echo "$(GREEN)✅ Unit tests complete$(NC)"
 
-# Run tests with coverage
-.PHONY: test-coverage
-test-coverage:
-	@echo "Running tests with coverage..."
-	go test -v -coverprofile=coverage.out ./...
-	go tool cover -html=coverage.out -o coverage.html
-	@echo "Coverage report generated: coverage.html"
-
-# Run tests with race detector
-.PHONY: test-race
-test-race:
-	@echo "Running tests with race detector..."
-	go test -race ./...
-
-# Run integration tests
-.PHONY: test-integration
-test-integration:
-	@echo "Running integration tests..."
-	go test -tags=integration -v ./...
-
-# Run all tests
-.PHONY: test-all
+## Run all tests (unit + integration + race detection)
 test-all: test test-race test-integration
 
-# Clean build artifacts
-.PHONY: clean
-clean:
-	@echo "Cleaning build artifacts..."
-	@rm -rf $(BUILD_DIR)
-	@rm -f $(BINARY_NAME)
-	@rm -f coverage.out coverage.html
-	@rm -rf .terraform-generated
-	@rm -f .clouddeploy.json
+## Run tests with coverage report
+test-coverage:
+	@echo "$(BLUE)Running tests with coverage...$(NC)"
+	@mkdir -p coverage
+	go test -v -coverprofile=coverage/coverage.out ./...
+	go tool cover -html=coverage/coverage.out -o coverage/coverage.html
+	@echo "$(GREEN)✅ Coverage report: coverage/coverage.html$(NC)"
 
-# Install dependencies
-.PHONY: deps
-deps:
-	@echo "Installing dependencies..."
-	go mod download
-	go mod tidy
+## Run tests with race detection
+test-race:
+	@echo "$(BLUE)Running tests with race detection...$(NC)"
+	go test -race -v ./...
+	@echo "$(GREEN)✅ Race detection tests complete$(NC)"
 
-# Format code
-.PHONY: fmt
-fmt:
-	@echo "Formatting code..."
-	go fmt ./...
+## Run integration tests
+test-integration:
+	@echo "$(BLUE)Running integration tests...$(NC)"
+	# Add integration test commands here
+	@echo "$(YELLOW)⚠️  Integration tests not yet implemented$(NC)"
 
-# Lint code
-.PHONY: lint
+# === CODE QUALITY ===
+
+## Run linter
 lint:
-	@echo "Linting code..."
-	@if command -v golangci-lint >/dev/null 2>&1; then \
-		golangci-lint run; \
-	else \
-		echo "golangci-lint not installed. Install with: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest"; \
-		go vet ./...; \
-	fi
+	@echo "$(BLUE)Running linter...$(NC)"
+	@which golangci-lint > /dev/null || (echo "$(RED)golangci-lint not found. Run 'make install-tools'$(NC)" && exit 1)
+	golangci-lint run
+	@echo "$(GREEN)✅ Linting complete$(NC)"
 
-# Security scanning
-.PHONY: security
+## Format code
+format:
+	@echo "$(BLUE)Formatting code...$(NC)"
+	go fmt ./...
+	@echo "$(GREEN)✅ Code formatted$(NC)"
+
+# === SECURITY ===
+
+## Run security scanning
 security:
-	@echo "Running security scans..."
-	go vet ./...
-	@if command -v gosec >/dev/null 2>&1; then \
-		gosec ./...; \
-	else \
-		echo "gosec not found. Install with: go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest"; \
-	fi
-	@if command -v govulncheck >/dev/null 2>&1; then \
-		govulncheck ./...; \
-	else \
-		echo "govulncheck not found. Install with: go install golang.org/x/vuln/cmd/govulncheck@latest"; \
-	fi
+	@echo "$(BLUE)Running security scans...$(NC)"
+	@which gosec > /dev/null || (echo "$(RED)gosec not found. Run 'make install-tools'$(NC)" && exit 1)
+	gosec ./...
+	@echo "$(YELLOW)Running vulnerability check...$(NC)"
+	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+	@echo "$(GREEN)✅ Security scanning complete$(NC)"
 
-# Run benchmarks
-.PHONY: benchmark
-benchmark:
-	@echo "Running benchmarks..."
-	go test -bench=. -benchmem ./...
+# === DEVELOPMENT SETUP ===
 
-# Production build with security flags
-.PHONY: build-production
-build-production:
-	@echo "Building $(BINARY_NAME) for production..."
-	@mkdir -p $(BUILD_DIR)
-	CGO_ENABLED=0 go build -buildmode=pie $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) $(MAIN_PACKAGE)
-	@echo "Production binary built: $(BUILD_DIR)/$(BINARY_NAME)"
-
-# Run the application (for development)
-.PHONY: run
-run: build-local
-	@echo "Running $(BINARY_NAME)..."
-	./$(BINARY_NAME)
-
-# Install the binary to GOPATH/bin
-.PHONY: install
-install:
-	@echo "Installing $(BINARY_NAME)..."
-	go install $(LDFLAGS) $(MAIN_PACKAGE)
-
-# Development setup
-.PHONY: dev-setup
-dev-setup: deps
-	@echo "Setting up development environment..."
-	@if ! command -v golangci-lint >/dev/null 2>&1; then \
-		echo "Installing golangci-lint..."; \
-		go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; \
-	fi
-	@echo "Development environment ready!"
-
-# Install security and development tools
-.PHONY: install-tools
+## Install development tools
 install-tools:
-	@echo "Installing development and security tools..."
+	@echo "$(BLUE)Installing development tools...$(NC)"
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	go install github.com/securecodewarrior/govulncheck@latest
 	go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
-	go install golang.org/x/vuln/cmd/govulncheck@latest
-	go install golang.org/x/tools/cmd/goimports@latest
-	@echo "Tools installed successfully"
+	@echo "$(GREEN)✅ Development tools installed$(NC)"
 
-# Pre-commit checks
-.PHONY: pre-commit
-pre-commit: fmt lint security test-all
-	@echo "Pre-commit checks completed successfully"
+## Set up development environment
+dev-setup: install-tools deps
+	@echo "$(BLUE)Setting up development environment...$(NC)"
+	@echo "$(GREEN)✅ Development environment ready$(NC)"
+	@echo "$(YELLOW)Now run: make build-dev$(NC)"
 
-# Release preparation
-.PHONY: release-check
-release-check: pre-commit build-production
-	@echo "Release readiness check completed"
+# === INSTALLATION ===
 
-# Help
-.PHONY: help
+## Install binary to system PATH (requires sudo)
+install: build-production
+	@echo "$(BLUE)Installing $(BINARY_NAME) to /usr/local/bin...$(NC)"
+	sudo cp $(BUILD_DIR)/$(BINARY_NAME) /usr/local/bin/
+	@echo "$(GREEN)✅ $(BINARY_NAME) installed to /usr/local/bin$(NC)"
+
+## Uninstall binary from system PATH (requires sudo)
+uninstall:
+	@echo "$(YELLOW)Removing $(BINARY_NAME) from /usr/local/bin...$(NC)"
+	sudo rm -f /usr/local/bin/$(BINARY_NAME)
+	@echo "$(GREEN)✅ $(BINARY_NAME) uninstalled$(NC)"
+
+# === HELP ===
+
+## Show available targets and their descriptions
 help:
-	@echo "CloudDeploy CLI Makefile"
+	@echo "$(BLUE)CloudDeploy CLI Makefile$(NC)"
 	@echo ""
-	@echo "Available targets:"
-	@echo "  build              Build the binary for current platform"
-	@echo "  build-local        Quick build for local development"
-	@echo "  build-production   Build with production security flags"
-	@echo "  build-all          Build for multiple platforms"
-	@echo "  test               Run tests"
-	@echo "  test-coverage      Run tests with coverage report"
-	@echo "  test-race          Run tests with race detector"
-	@echo "  test-integration   Run integration tests"
-	@echo "  test-all           Run all tests (unit, race, integration)"
-	@echo "  benchmark          Run benchmarks"
-	@echo "  clean              Clean build artifacts"
-	@echo "  deps               Install dependencies"
-	@echo "  fmt                Format code"
-	@echo "  lint               Lint code"
+	@echo "$(GREEN)Available targets:$(NC)"
+	@echo ""
+	@echo "$(YELLOW)Build:$(NC)"
+	@echo "  build              Build for development (default)"
+	@echo "  build-dev          Build with debug symbols"
+	@echo "  build-production   Build optimized for production"
+	@echo "  build-all          Build for all platforms"
+	@echo ""
+	@echo "$(YELLOW)Clean:$(NC)"
+	@echo "  clean              Remove all build artifacts"
+	@echo "  clean-dist         Remove distribution artifacts"
+	@echo ""
+	@echo "$(YELLOW)Dependencies:$(NC)"
+	@echo "  deps               Download dependencies"
+	@echo "  deps-update        Update dependencies"
+	@echo "  tidy               Tidy go.mod and go.sum"
+	@echo ""
+	@echo "$(YELLOW)Testing:$(NC)"
+	@echo "  test               Run unit tests"
+	@echo "  test-all           Run all tests"
+	@echo "  test-coverage      Generate coverage report"
+	@echo "  test-race          Run with race detection"
+	@echo ""
+	@echo "$(YELLOW)Code Quality:$(NC)"
+	@echo "  lint               Run linter"
+	@echo "  format             Format code"
 	@echo "  security           Run security scans"
-	@echo "  run                Build and run the application"
-	@echo "  install            Install binary to GOPATH/bin"
+	@echo ""
+	@echo "$(YELLOW)Development:$(NC)"
+	@echo "  install-tools      Install development tools"
 	@echo "  dev-setup          Set up development environment"
-	@echo "  install-tools      Install development and security tools"
-	@echo "  pre-commit         Run all pre-commit checks"
-	@echo "  release-check      Check if ready for release"
-	@echo "  help               Show this help message"
+	@echo ""
+	@echo "$(YELLOW)Installation:$(NC)"
+	@echo "  install            Install to /usr/local/bin"
+	@echo "  uninstall          Remove from /usr/local/bin"
 	@echo ""
 	@echo "Examples:"
-	@echo "  make build              # Build for current platform"
-	@echo "  make test               # Run tests"
-	@echo "  make build-all          # Build for all platforms"
-	@echo "  make VERSION=v1.0.0 build  # Build with version" 
+	@echo "  make build-production  # Build optimized binary"
+	@echo "  make test-all          # Run comprehensive tests"
+	@echo "  make install           # Install to system PATH" 
