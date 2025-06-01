@@ -171,26 +171,6 @@ export CLOUDDEPLOY_LOG_LEVEL=info
 export CLOUDDEPLOY_CONFIG_PATH=./custom-config.json
 ```
 
-## 🧪 Testing
-
-### Run All Tests
-```bash
-make test-all          # Unit + integration + race tests
-make test-coverage     # Generate coverage report
-make security          # Security scanning
-```
-
-### Test Coverage
-- **Unit Tests**: 100% pass rate across all modules
-- **Integration Tests**: Multi-cloud template generation
-- **Race Detection**: Concurrent safety verification
-- **Security Scanning**: gosec and govulncheck
-
-## 🔧 Development
-
-### Build System
-```
-
 ## 📊 Examples
 
 ### Deploy a Node.js App to AWS (with automatic AWS CLI installation)
@@ -273,11 +253,106 @@ clouddeploy deploy
 > ✅ Site available at: https://myportfolio.azureedge.net
 ```
 
-## 🔧 Troubleshooting
+---
 
-### Common Issues
+# 🔐 Bloomberg Enterprise Authentication
 
-#### CLI Installation Issues
+CloudDeploy includes **automatic authentication** specifically optimized for Bloomberg's enterprise environment! This eliminates the need to manually run authentication commands.
+
+## 🎯 What's New for Bloomberg Employees
+
+Instead of seeing error messages like:
+```
+ERRO Authentication check failed: not authenticated with Azure. Please run 'az login'
+```
+
+CloudDeploy now **automatically initiates the login process** for you with Bloomberg-optimized settings.
+
+## 🏢 Bloomberg Environment Detection
+
+CloudDeploy automatically detects if you're in a Bloomberg environment by checking:
+- Hostname containing "bloomberg"
+- Username containing "corp" 
+- Domain containing "bloomberg"
+- `BLOOMBERG_ENV` environment variable
+
+## ☁️ Cloud Provider Support for Bloomberg
+
+### Azure (Recommended for Bloomberg)
+When you need to authenticate with Azure, CloudDeploy will:
+
+1. **Detect Bloomberg environment** 
+2. **Use device code flow** (better for enterprise SSO)
+3. **Prompt for B-Unit readiness**
+4. **Launch**: `az login --use-device-code --tenant common`
+5. **Fallback** to: `az login --allow-no-subscriptions` if needed
+
+**Example flow:**
+```
+🔐 Not authenticated with Azure. Initiating automatic login...
+🚀 Starting Azure authentication flow...
+💼 Detected Bloomberg environment. Using enterprise SSO authentication...
+🔑 Starting Bloomberg Azure SSO authentication...
+📱 Please have your B-Unit or B-Unit phone app ready for 2FA
+🖥️  Using device code flow for enterprise compatibility...
+```
+
+### AWS (Enterprise SSO)
+For AWS authentication, CloudDeploy will:
+
+1. **Try AWS SSO first**: `aws sso login`
+2. **Fallback to standard**: `aws configure` if SSO fails
+
+### Google Cloud Platform
+For GCP authentication, CloudDeploy will:
+
+1. **Use enterprise-friendly options**: `gcloud auth login --enable-gdrive-access --brief`
+2. **Integrate with CORP credentials**
+
+## 📱 What Bloomberg Employees Need
+
+Make sure you have:
+
+- **CORP credentials** (same username/password as your PC login)
+- **B-Unit device** or **B-Unit phone app** for 2FA authentication
+- **Access to the cloud provider** through Bloomberg's enterprise setup
+
+## 🔄 Authentication Flow Comparison
+
+### Before (Manual Process)
+```bash
+clouddeploy init
+> ERRO Authentication check failed: not authenticated with Azure. Please run 'az login'
+> INFO Please authenticate with your cloud provider and try again.
+> FATA Initialization failed: not authenticated with Azure. Please run 'az login'
+
+# You had to manually run:
+az login
+# Then run clouddeploy again
+clouddeploy init
+```
+
+### After (Automatic Process)
+```bash
+clouddeploy init
+> 🔐 Not authenticated with Azure. Initiating automatic login...
+> 🚀 Starting Azure authentication flow...
+> 💼 Detected Bloomberg environment. Using enterprise SSO authentication...
+> 🔑 Starting Bloomberg Azure SSO authentication...
+> 📱 Please have your B-Unit or B-Unit phone app ready for 2FA
+> 🖥️  Using device code flow for enterprise compatibility...
+> [Authentication flow opens automatically]
+> ✅ Bloomberg Azure authentication successful!
+> [Continues with clouddeploy init...]
+```
+
+---
+
+# 🔧 Troubleshooting
+
+## Common Issues
+
+### CLI Installation Issues
 CloudDeploy automatically handles CLI installation, but if you encounter issues:
 
 ```bash
@@ -292,7 +367,9 @@ az --version      # Should show Azure CLI
 # Azure: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli
 ```
 
-#### Authentication (Bloomberg Employees)
+### Authentication Issues
+
+#### For Bloomberg Employees
 CloudDeploy now **automatically handles authentication** for you! 🎉
 
 When you run `clouddeploy init` or `clouddeploy deploy`, the tool will:
@@ -300,40 +377,30 @@ When you run `clouddeploy init` or `clouddeploy deploy`, the tool will:
 2. **Launch the appropriate SSO flow** for your cloud provider
 3. **Guide you through the process** with Bloomberg-specific instructions
 
-**For Bloomberg employees using Azure:**
-- Uses device code flow for better enterprise SSO compatibility
-- Prompts you to have your B-Unit or B-Unit phone app ready
-- Automatically handles CORP credential authentication
-
-**For Bloomberg employees using AWS:**
-- Attempts AWS SSO login first (most common for enterprise)
-- Falls back to standard AWS configure if needed
-- Integrates with Bloomberg's enterprise AWS setup
-
-**For Bloomberg employees using GCP:**
-- Uses enterprise-friendly authentication options
-- Integrates with your CORP credentials
-
-**What you need:**
-- Your CORP username and password (same as your PC login)
-- Your B-Unit device or B-Unit phone app for 2FA
-- Access to the cloud provider through Bloomberg's enterprise setup
-
-#### Authentication Failures (Non-Bloomberg or Fallback)
+#### Authentication Failures
 If automatic authentication fails, you can still authenticate manually:
 
 ```bash
-# AWS
-aws configure  # or aws sso login
-
-# GCP  
-gcloud auth login
-
 # Azure
 az login
+
+# AWS  
+aws sso login
+# or
+aws configure
+
+# GCP
+gcloud auth login
 ```
 
-#### Platform-Specific Notes
+#### Environment Variables for Bloomberg
+
+You can force Bloomberg environment detection by setting:
+```bash
+export BLOOMBERG_ENV=true
+```
+
+### Platform-Specific Notes
 - **Windows**: Requires PowerShell or Command Prompt with admin privileges for installation
 - **macOS**: May require `sudo` password for CLI installation
 - **Linux**: Supports both package managers (apt, dnf, yum) and universal install scripts
@@ -344,5 +411,96 @@ clouddeploy --help           # General help
 clouddeploy init --help      # Init command help
 clouddeploy deploy --help    # Deploy command help
 ```
+
+---
+
+# 📋 Changelog
+
+## [v2.0.0] - 2024-12-XX - Bloomberg Enterprise Authentication
+
+### 🎉 Major New Features
+
+#### **Automatic Authentication for Bloomberg Employees**
+- **No more manual authentication steps!** CloudDeploy now automatically handles authentication for Bloomberg employees
+- **Smart environment detection** - Automatically detects Bloomberg corporate environment
+- **Enterprise SSO optimization** - Uses the best authentication methods for Bloomberg's SSO setup
+
+### ✨ New Features
+
+#### **Bloomberg Environment Detection**
+- Automatically detects Bloomberg environment by checking:
+  - Hostname containing "bloomberg"
+  - Username containing "corp"
+  - Domain containing "bloomberg" 
+  - `BLOOMBERG_ENV` environment variable
+
+#### **Azure Authentication (Optimized for Bloomberg)**
+- **Device code flow** for better enterprise SSO compatibility
+- **Automatic tenant handling** with fallback options
+- **B-Unit integration prompts** to prepare users for 2FA
+- Commands used: `az login --use-device-code --tenant common`
+
+#### **AWS Authentication (Enterprise SSO)**
+- **AWS SSO first** - Tries `aws sso login` before standard methods
+- **Automatic fallback** to `aws configure` if SSO fails
+- **Bloomberg enterprise setup aware**
+
+#### **GCP Authentication (Enterprise-friendly)**
+- **Enhanced login options** with `--enable-gdrive-access --brief`
+- **CORP credential integration**
+- **Enterprise authentication flow**
+
+### 🔧 Improvements
+
+#### **Better Error Messages**
+- Instead of: `"Please run 'az login'"`
+- Now shows: `"The authentication process was attempted automatically. If you're a Bloomberg employee, make sure your CORP credentials and B-Unit are ready"`
+
+#### **User Experience**
+- **Proactive 2FA prompts** - Warns users to have B-Unit ready
+- **Real-time feedback** during authentication process
+- **Clear Bloomberg-specific guidance**
+- **Automatic retry mechanisms** with fallback options
+
+#### **Non-Bloomberg Compatibility**
+- **Standard authentication** still works for non-Bloomberg users
+- **Automatic detection** - No configuration needed
+- **Manual override** available with environment variables
+
+### 📝 Updated Files
+- `internal/providers/providers.go` - Complete authentication overhaul
+- `cmd/init.go` - Updated error messaging
+- `cmd/deploy.go` - Updated error messaging  
+- `README.md` - Enhanced troubleshooting section
+
+### 🧪 Testing
+- Verified build compatibility
+- Maintained backward compatibility for non-Bloomberg users
+
+### 💡 Usage Examples
+
+#### Before (Manual)
+```bash
+clouddeploy init
+# ERROR: not authenticated with Azure. Please run 'az login'
+az login
+clouddeploy init
+```
+
+#### After (Automatic)
+```bash
+clouddeploy init
+# 🔐 Not authenticated with Azure. Initiating automatic login...
+# 💼 Detected Bloomberg environment...
+# [Authentication happens automatically]
+# ✅ Bloomberg Azure authentication successful!
+```
+
+### 🔗 Related
+- Based on Bloomberg NEXI documentation for enterprise SSO
+- Integrates with Bloomberg's CORP credential system
+- Supports B-Unit and B-Unit phone app for 2FA 
+
+---
 
 **CloudDeploy CLI** - Intelligent Multi-Cloud Deployment for the Modern Enterprise
