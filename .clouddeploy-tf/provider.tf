@@ -22,14 +22,14 @@ terraform {
 }
 
 provider "aws" {
-  region = "us-west-2"
+  region = "eu-west-1"
   
   default_tags {
     tags = {
-      Project     = "max"
+      Project     = "test"
       Environment = "production"
       ManagedBy   = "CloudDeploy"
-      AppType     = "python"
+      AppType     = "flask"
     }
   }
 }
@@ -58,7 +58,7 @@ resource "aws_vpc" "main" {
   enable_dns_support   = true
 
   tags = {
-    Name = "max-vpc"
+    Name = "test-vpc"
   }
 }
 
@@ -66,7 +66,7 @@ resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 
   tags = {
-    Name = "max-igw"
+    Name = "test-igw"
   }
 }
 
@@ -79,7 +79,7 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "max-public-subnet-${count.index + 1}"
+    Name = "test-public-subnet-${count.index + 1}"
     Type = "Public"
   }
 }
@@ -93,7 +93,7 @@ resource "aws_route_table" "public" {
   }
 
   tags = {
-    Name = "max-public-rt"
+    Name = "test-public-rt"
   }
 }
 
@@ -105,7 +105,7 @@ resource "aws_route_table_association" "public" {
 }
 
 resource "aws_security_group" "app" {
-  name_prefix = "max-sg"
+  name_prefix = "test-sg"
   vpc_id      = aws_vpc.main.id
 
   ingress {
@@ -123,6 +123,14 @@ resource "aws_security_group" "app" {
   }
 
   
+  ingress {
+    description = "SSH access from current IP only"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["${chomp(data.http.current_ip.response_body)}/32"]
+  }
+  
 
   egress {
     from_port   = 0
@@ -132,6 +140,6 @@ resource "aws_security_group" "app" {
   }
 
   tags = {
-    Name = "max-sg"
+    Name = "test-sg"
   }
 } 

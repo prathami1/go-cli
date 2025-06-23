@@ -58,7 +58,7 @@ func runDeploy(cmd *cobra.Command) error {
 	// Verify authentication
 	logger.Info("🔐 Verifying cloud provider authentication...")
 	if err := providers.CheckAuthentication(cfg.CloudProvider); err != nil {
-		return fmt.Errorf("authentication failed: %w. The authentication process was attempted automatically. If you're a Bloomberg employee, make sure your CORP credentials and B-Unit are ready", err)
+		return fmt.Errorf("authentication failed: %w. Please ensure you have the proper cloud provider credentials configured", err)
 	}
 	logger.Info("✅ Authentication verified")
 

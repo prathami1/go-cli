@@ -219,6 +219,11 @@ func Init() error {
 
 // InitInDir runs terraform init in a specific directory
 func InitInDir(dir string) error {
+	// Ensure Terraform is installed before proceeding
+	if err := ensureTerraformInstalled(); err != nil {
+		return err
+	}
+
 	logger.Debugf("Running terraform init in directory: %s", dir)
 
 	cmd := exec.Command("terraform", "init")
@@ -240,6 +245,11 @@ func Plan() (string, error) {
 
 // PlanInDir runs terraform plan in a specific directory and returns the output
 func PlanInDir(dir string) (string, error) {
+	// Ensure Terraform is installed before proceeding
+	if err := ensureTerraformInstalled(); err != nil {
+		return "", err
+	}
+
 	logger.Debugf("Running terraform plan in directory: %s", dir)
 
 	cmd := exec.Command("terraform", "plan", "-out=tfplan")
@@ -261,6 +271,11 @@ func Apply() (string, error) {
 
 // ApplyInDir runs terraform apply in a specific directory
 func ApplyInDir(dir string) (string, error) {
+	// Ensure Terraform is installed before proceeding
+	if err := ensureTerraformInstalled(); err != nil {
+		return "", err
+	}
+
 	logger.Debugf("Running terraform apply in directory: %s", dir)
 
 	cmd := exec.Command("terraform", "apply", "-auto-approve", "tfplan")
@@ -277,6 +292,11 @@ func ApplyInDir(dir string) (string, error) {
 
 // Destroy runs terraform destroy
 func Destroy() (string, error) {
+	// Ensure Terraform is installed before proceeding
+	if err := ensureTerraformInstalled(); err != nil {
+		return "", err
+	}
+
 	logger.Debug("Running terraform destroy...")
 
 	cmd := exec.Command("terraform", "destroy", "-auto-approve")
@@ -297,6 +317,11 @@ func GetOutputs() (map[string]interface{}, error) {
 
 // GetOutputsInDir retrieves terraform outputs from a specific directory
 func GetOutputsInDir(dir string) (map[string]interface{}, error) {
+	// Ensure Terraform is installed before proceeding
+	if err := ensureTerraformInstalled(); err != nil {
+		return nil, err
+	}
+
 	logger.Debugf("Getting terraform outputs from directory: %s", dir)
 
 	cmd := exec.Command("terraform", "output", "-json")
