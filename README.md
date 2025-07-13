@@ -11,7 +11,7 @@ CloudDeploy is a powerful command-line tool that simplifies cloud deployment acr
 - 🎯 **Intelligent Analysis**: Analyzes your project structure and suggests optimal deployment configurations
 - ☁️ **Multi-Cloud Support**: Deploy to AWS, GCP, or Azure with the same simple commands
 - 📦 **Zero Configuration**: Works out of the box with sensible defaults
-- 🚀 **Lightning Fast**: Get from idea to deployed application in under 5 minutes
+- 🚀 **Lightning Fast**: Get from local to deployed application in under 5 minutes
 
 ## 📦 Installation
 
@@ -32,10 +32,6 @@ go build -o bin/cdeploy .
 # Add to PATH (optional)
 export PATH=$PATH:$(pwd)/bin
 ```
-
-### Or Download Binary
-
-Download the latest release from the [releases page](https://github.com/yourusername/clouddeploy/releases).
 
 ## 🚀 Quick Start
 
@@ -225,10 +221,6 @@ cdeploy start --help     # Start command help
 cdeploy deploy --help    # Deploy command help
 ```
 
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
 ### Development Setup
 
 ```bash
@@ -244,18 +236,4 @@ go build -o bin/cdeploy .
 
 # Run tests
 go test ./...
-```
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Terraform for infrastructure as code
-- AWS, GCP, and Azure for cloud platforms
-- The Go community for excellent tooling
-
----
-
-**Made with ❤️ for developers who want to deploy fast and focus on building great applications.** 
+``
